@@ -1,4 +1,3 @@
 <resources>
-    <string name="course_overlap">\n重叠 %1$d 门</string>
-    <string name="course_span">%1$s\n第 %2$d–%3$d 节\n%4$s–%5$s%6$s</string>
+    <string name="overview_week">第 %1$d 周 ▾</string>
 </resources>

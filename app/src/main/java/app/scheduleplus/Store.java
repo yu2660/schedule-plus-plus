@@ -39,7 +39,9 @@ public final class Store {
     }
     public static String encode(State s) throws JSONException {
         JSONArray semesters=new JSONArray();for(Semester term:s.allSemesters())semesters.put(encodeSemester(term));
-        return new JSONObject().put("format","schedule++").put("version",2).put("activeSemesterId",s.id).put("semesters",semesters).toString(2);
+        JSONArray templates=new JSONArray();for(TaskTemplate t:s.templates)templates.put(new JSONObject().put("id",t.id).put("name",t.name).put("prefix",t.prefix).put("notes",t.notes).put("reminderMinutes",t.reminderMinutes));
+        JSONObject display=new JSONObject().put("weekends",s.display.weekends).put("teacher",s.display.teacher).put("location",s.display.location).put("time",s.display.time);
+        return new JSONObject().put("format","schedule++").put("version",3).put("activeSemesterId",s.id).put("semesters",semesters).put("display",display).put("templates",templates).toString(2);
     }
     private static JSONObject encodeSemester(Semester s) throws JSONException {
         JSONObject o=new JSONObject().put("id",s.id).put("semester",s.semester).put("description",s.description).put("monday",s.monday).put("weeks",s.weeks);
@@ -50,7 +52,7 @@ public final class Store {
             for(Meeting m:c.meetings) meetings.put(new JSONObject().put("day",m.day).put("first",m.first).put("last",m.last).put("weeks",new JSONArray(m.weeks)));
             courses.put(new JSONObject().put("id",c.id).put("name",c.name).put("location",c.location).put("teacher",c.teacher).put("color",c.color).put("meetings",meetings));
         }
-        for(Task t:s.tasks) tasks.put(new JSONObject().put("id",t.id).put("title",t.title).put("courseId",nullable(t.courseId)).put("date",t.date).put("time",nullable(t.time)).put("notes",t.notes).put("reminder",nullable(t.reminder)).put("done",t.done).put("reminded",t.reminded));
+        for(Task t:s.tasks) tasks.put(new JSONObject().put("id",t.id).put("title",t.title).put("courseId",nullable(t.courseId)).put("date",t.date).put("time",nullable(t.time)).put("notes",t.notes).put("reminder",nullable(t.reminder)).put("done",t.done).put("reminded",t.reminded).put("reminderMinutes",t.reminderMinutes));
         return o.put("slots",slots).put("courses",courses).put("tasks",tasks);
     }
     private static Object nullable(String s) { return s==null?JSONObject.NULL:s; }
@@ -61,7 +63,7 @@ public final class Store {
         JSONTokener parser=new JSONTokener(raw); Object parsed=parser.nextValue();
         check(parsed instanceof JSONObject && parser.nextClean()==0,"备份必须是完整的 JSON 对象");
         JSONObject o=(JSONObject)parsed;
-        int version=o.getInt("version");check("schedule++".equals(o.getString("format")) && (version==1 || version==2),"不支持的备份格式或版本");
+        int version=o.getInt("version");check("schedule++".equals(o.getString("format")) && (version>=1 && version<=3),"不支持的备份格式或版本");
         State state=new State();
         if(version==1) {
             copySemester(decodeSemester(o,false),state);
@@ -75,6 +77,11 @@ public final class Store {
                 if(term.id.equals(active) && !found){copySemester(term,state);found=true;}else state.otherSemesters.add(term);
             }
             check(found,"当前学期不存在");
+        }
+        if(version==3){
+            JSONObject d=o.getJSONObject("display");state.display.weekends=d.getBoolean("weekends");state.display.teacher=d.getBoolean("teacher");state.display.location=d.getBoolean("location");state.display.time=d.getBoolean("time");
+            JSONArray ts=o.getJSONArray("templates");check(ts.length()<=30,"最多保存 30 个任务模板");state.templates.clear();
+            for(int i=0;i<ts.length();i++){JSONObject p=ts.getJSONObject(i);TaskTemplate t=new TaskTemplate();t.id=p.getString("id");t.name=p.getString("name");t.prefix=p.getString("prefix");t.notes=p.getString("notes");t.reminderMinutes=p.getInt("reminderMinutes");state.templates.add(t);}
         }
         validate(state);return state;
     }
@@ -96,7 +103,7 @@ public final class Store {
             s.courses.add(c);
         }
         for(int i=0;i<tasks.length();i++) {
-            JSONObject p=tasks.getJSONObject(i); Task t=new Task(); t.id=p.getString("id"); t.title=p.getString("title"); t.courseId=optional(p,"courseId"); t.date=p.getString("date"); t.time=optional(p,"time"); t.notes=p.getString("notes"); t.reminder=optional(p,"reminder"); t.done=p.getBoolean("done"); t.reminded=p.getBoolean("reminded"); s.tasks.add(t);
+            JSONObject p=tasks.getJSONObject(i); Task t=new Task(); t.id=p.getString("id"); t.title=p.getString("title"); t.courseId=optional(p,"courseId"); t.date=p.getString("date"); t.time=optional(p,"time"); t.notes=p.getString("notes"); t.reminder=optional(p,"reminder"); t.done=p.getBoolean("done"); t.reminded=p.getBoolean("reminded");t.reminderMinutes=p.has("reminderMinutes")?p.getInt("reminderMinutes"):-1;s.tasks.add(t);
         }
         validateSemester(s); return s;
     }
