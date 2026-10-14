@@ -1,0 +1,145 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1504" height="940" viewBox="0 0 1504 940">
+<rect width="1504" height="940" fill="#ECEEF5"/>
+<text x="40" y="51" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="34" font-weight="700" fill="#202337">Schedule++</text>
+<text x="40" y="83" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#5856D6">第一版 · 安卓原生课程表与截止任务</text>
+<text x="1020" y="52" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">2026.10.14  /  V0.2</text>
+<text x="1020" y="80" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" font-weight="400" fill="#74798F">信息结构示意 · 示例数据 · 非设备截图</text>
+<rect x="40" y="130" width="336" height="708" rx="30" fill="#FFFFFF"/>
+<rect x="48" y="138" width="320" height="692" rx="24" fill="#F6F7FB"/>
+<text x="66" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">9:41</text>
+<text x="304" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">● ▰</text>
+<text x="66" y="195" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="10" font-weight="700" fill="#5856D6">SCHEDULE++</text>
+<text x="66" y="232" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="700" fill="#202337">我的课程表</text>
+<text x="66" y="258" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">2026 秋季学期 ▾ 切换学期</text>
+<rect x="48" y="765" width="320" height="65" rx="24" fill="#FFFFFF"/>
+<text x="83" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="700" fill="#5856D6">课程表</text>
+<text x="184" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">日程</text>
+<text x="285" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">设置</text>
+<rect x="290" y="692" width="54" height="54" rx="27" fill="#5856D6"/>
+<text x="303" y="729" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="30" font-weight="400" fill="#FFFFFF">＋</text>
+<rect x="62" y="280" width="292" height="44" rx="16" fill="#FFFFFF"/>
+<text x="78" y="308" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#5856D6">‹        第 6 周 ▾             ›</text>
+<text x="66" y="350" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">10月12日 — 10月18日</text>
+<text x="69" y="385" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">节次</text>
+<text x="128" y="385" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">周一</text>
+<text x="187" y="385" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">周二</text>
+<text x="246" y="385" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#5856D6">周三</text>
+<text x="305" y="385" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">周四</text>
+<text x="75" y="427" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">1</text>
+<rect x="121" y="401" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="180" y="401" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="239" y="401" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="298" y="401" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<text x="75" y="488" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">2</text>
+<rect x="121" y="462" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="180" y="462" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="239" y="462" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="298" y="462" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<text x="75" y="549" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">3</text>
+<rect x="121" y="523" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="180" y="523" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="239" y="523" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="298" y="523" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<text x="75" y="610" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">4</text>
+<rect x="121" y="584" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="180" y="584" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="239" y="584" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="298" y="584" width="55" height="57" rx="8" fill="#EFF1F7"/>
+<rect x="121" y="401" width="55" height="118" rx="8" fill="#E9E7FF"/>
+<text x="128" y="423" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#5856D6">高等</text>
+<text x="128" y="441" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#5856D6">数学</text>
+<rect x="180" y="523" width="55" height="57" rx="8" fill="#DDF2EC"/>
+<text x="187" y="545" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#237B66">程序</text>
+<text x="187" y="563" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#237B66">设计</text>
+<rect x="239" y="401" width="55" height="57" rx="8" fill="#FFECD9"/>
+<text x="246" y="423" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#A35F1C">大学</text>
+<text x="246" y="441" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#A35F1C">物理</text>
+<text x="69" y="675" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#74798F">左右滑动查看一周 · 点课程查看任务</text>
+<rect x="402" y="130" width="336" height="708" rx="30" fill="#FFFFFF"/>
+<rect x="410" y="138" width="320" height="692" rx="24" fill="#F6F7FB"/>
+<text x="428" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">9:41</text>
+<text x="666" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">● ▰</text>
+<text x="428" y="195" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="10" font-weight="700" fill="#5856D6">SCHEDULE++</text>
+<text x="428" y="232" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="700" fill="#202337">日程任务</text>
+<text x="428" y="258" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">每一个截止日期，都心中有数</text>
+<rect x="410" y="765" width="320" height="65" rx="24" fill="#FFFFFF"/>
+<text x="445" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">课程表</text>
+<text x="546" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="700" fill="#5856D6">日程</text>
+<text x="647" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">设置</text>
+<rect x="652" y="692" width="54" height="54" rx="27" fill="#5856D6"/>
+<text x="665" y="729" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="30" font-weight="400" fill="#FFFFFF">＋</text>
+<rect x="424" y="280" width="292" height="84" rx="16" fill="#FFFFFF"/>
+<text x="442" y="314" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="23" font-weight="700" fill="#202337">3 项待完成</text>
+<text x="442" y="342" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" font-weight="400" fill="#B34053">其中 1 项已逾期</text>
+<text x="444" y="397" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#5856D6">● 待完成</text>
+<text x="601" y="397" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">已完成</text>
+<text x="426" y="424" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">已过期 · 10月13日</text>
+<rect x="424" y="436" width="292" height="106" rx="16" fill="#FFFFFF"/>
+<text x="438" y="467" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#5856D6">○</text>
+<text x="466" y="466" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#202337">完成微积分习题</text>
+<text x="440" y="493" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">高等数学 · 10月13日 截止</text>
+<text x="440" y="518" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">教材 P42，题 1–6</text>
+<text x="426" y="563" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">明天 · 10月15日</text>
+<rect x="424" y="575" width="292" height="106" rx="16" fill="#FFFFFF"/>
+<text x="438" y="606" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="400" fill="#5856D6">○</text>
+<text x="466" y="605" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#202337">提交实验报告</text>
+<text x="440" y="632" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">大学物理 · 10月15日 18:00</text>
+<text x="440" y="657" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">附实验数据与误差分析</text>
+<rect x="764" y="130" width="336" height="708" rx="30" fill="#FFFFFF"/>
+<rect x="772" y="138" width="320" height="692" rx="24" fill="#F6F7FB"/>
+<text x="790" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">9:41</text>
+<text x="1028" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">● ▰</text>
+<text x="790" y="195" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="10" font-weight="700" fill="#5856D6">SCHEDULE++</text>
+<text x="790" y="232" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="700" fill="#202337">高等数学</text>
+<text x="790" y="258" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">课程详情 · 所有未完成任务</text>
+<rect x="772" y="765" width="320" height="65" rx="24" fill="#FFFFFF"/>
+<text x="807" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="700" fill="#5856D6">课程表</text>
+<text x="908" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">日程</text>
+<text x="1009" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">设置</text>
+<rect x="1014" y="692" width="54" height="54" rx="27" fill="#5856D6"/>
+<text x="1027" y="729" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="30" font-weight="400" fill="#FFFFFF">＋</text>
+<rect x="786" y="280" width="292" height="111" rx="16" fill="#FFFFFF"/>
+<text x="801" y="307" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">理科楼 A101 · 陈老师</text>
+<text x="801" y="335" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">周一 · 第 1–2 节</text>
+<text x="801" y="363" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">周次 1、3、5、6、8、10、12、16</text>
+<text x="787" y="423" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="18" font-weight="700" fill="#202337">所有未完成任务</text>
+<rect x="786" y="440" width="292" height="103" rx="16" fill="#FFFFFF"/>
+<text x="800" y="471" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#202337">○  完成微积分习题</text>
+<text x="802" y="498" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#B34053">10月13日 截止</text>
+<text x="802" y="522" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">教材 P42，题 1–6</text>
+<rect x="786" y="563" width="292" height="48" rx="12" fill="#5856D6"/>
+<text x="875" y="594" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="15" font-weight="700" fill="#FFFFFF">＋ 添加任务</text>
+<text x="806" y="646" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#5856D6">编辑课程</text>
+<text x="937" y="646" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#5856D6">已完成记录</text>
+<rect x="1126" y="130" width="336" height="708" rx="30" fill="#FFFFFF"/>
+<rect x="1134" y="138" width="320" height="692" rx="24" fill="#F6F7FB"/>
+<text x="1152" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">9:41</text>
+<text x="1390" y="163" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="11" font-weight="400" fill="#202337">● ▰</text>
+<text x="1152" y="195" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="10" font-weight="700" fill="#5856D6">SCHEDULE++</text>
+<text x="1152" y="232" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="26" font-weight="700" fill="#202337">添加任务</text>
+<text x="1152" y="258" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">来自课程：高等数学</text>
+<rect x="1134" y="765" width="320" height="65" rx="24" fill="#FFFFFF"/>
+<text x="1169" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="700" fill="#5856D6">课程表</text>
+<text x="1270" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">日程</text>
+<text x="1371" y="801" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#74798F">设置</text>
+<rect x="1376" y="692" width="54" height="54" rx="27" fill="#5856D6"/>
+<text x="1389" y="729" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="30" font-weight="400" fill="#FFFFFF">＋</text>
+<text x="1151" y="296" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">任务标题 *</text>
+<rect x="1148" y="306" width="292" height="49" rx="16" fill="#FFFFFF"/>
+<text x="1161" y="337" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#202337">完成微积分习题</text>
+<text x="1151" y="381" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">关联课程（可选）</text>
+<rect x="1148" y="391" width="292" height="49" rx="16" fill="#FFFFFF"/>
+<text x="1161" y="422" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#202337">高等数学               ▾</text>
+<text x="1151" y="466" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">截止日期 *</text>
+<rect x="1148" y="476" width="292" height="49" rx="16" fill="#FFFFFF"/>
+<text x="1161" y="507" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#202337">2026-10-16            ▾</text>
+<text x="1151" y="551" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">具体时间（可选）</text>
+<rect x="1148" y="561" width="292" height="49" rx="16" fill="#FFFFFF"/>
+<text x="1161" y="592" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#202337">＋ 添加具体时间</text>
+<text x="1151" y="638" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="12" font-weight="400" fill="#74798F">提醒（可选）</text>
+<text x="1161" y="672" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="14" font-weight="400" fill="#5856D6">＋ 选择提醒日期和时间</text>
+<rect x="1148" y="692" width="218" height="48" rx="12" fill="#5856D6"/>
+<text x="1239" y="723" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="700" fill="#FFFFFF">保存</text>
+<text x="42" y="886" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="16" font-weight="400" fill="#5856D6">本地保存   /   任意教学周   /   课程与任务关联   /   日期必填、时间选填   /   按需提醒   /   文件备份与恢复</text>
+<text x="42" y="918" font-family="Microsoft YaHei, Noto Sans CJK SC, sans-serif" font-size="13" font-weight="400" fill="#74798F">原生界面以 APK 为准；窄屏课表可横滑，编辑采用系统日期时间选择器与对话框。</text>
+</svg>

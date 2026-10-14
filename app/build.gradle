@@ -1,0 +1,26 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'app.scheduleplus'
+    compileSdk 35
+    defaultConfig {
+        applicationId 'app.scheduleplus'
+        minSdk 26
+        targetSdk 35
+        versionCode 5
+        versionName '0.2.3'
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    lint { abortOnError true }
+    buildTypes {
+        personal {
+            initWith release
+            signingConfig signingConfigs.debug
+            debuggable false
+            minifyEnabled false
+        }
+    }
+}
+// V1 intentionally has no third-party runtime dependencies.
