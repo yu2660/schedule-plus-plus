@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_item" android:layout_width="match_parent" android:layout_height="56dp"
+    android:padding="3dp" android:background="?android:attr/selectableItemBackground">
+    <ImageView android:id="@+id/widget_course_bar" android:layout_width="3dp" android:layout_height="match_parent"
+        android:layout_alignParentStart="true" android:layout_marginTop="5dp" android:layout_marginBottom="5dp"
+        android:background="@color/widget_accent" android:importantForAccessibility="no" />
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent"
+        android:layout_marginStart="8dp" android:orientation="vertical" android:gravity="center_vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+            <TextView android:id="@+id/widget_item_title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+                android:textSize="13sp" android:textStyle="bold" android:textColor="@color/widget_ink" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+            <TextView android:id="@+id/widget_course_status" android:layout_width="wrap_content" android:layout_height="wrap_content"
+                android:layout_marginStart="3dp" android:textSize="11sp" android:textStyle="bold" android:textColor="@color/widget_accent"
+                android:includeFontPadding="false" android:maxLines="1" />
+        </LinearLayout>
+        <TextView android:id="@+id/widget_item_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/widget_muted" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+        <TextView android:id="@+id/widget_item_detail" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/widget_muted" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+    </LinearLayout>
+</RelativeLayout>

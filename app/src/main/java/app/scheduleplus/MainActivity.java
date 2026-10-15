@@ -49,7 +49,7 @@ public class MainActivity extends Activity {
         getWindow().getDecorView().setSystemUiVisibility(appearance.dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|(Build.VERSION.SDK_INT>=27?View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0));
         try {
             state=store.load(); ready=true;Reminders.ensureChannel(this); week=Math.max(1,Math.min(state.weeks,state.currentWeek(LocalDate.now())));
-            centerOnEntry=saved==null && !getIntent().hasExtra("taskId") && !getIntent().getBooleanExtra("reminderSettings",false);
+            centerOnEntry=saved==null && !getIntent().hasExtra("taskId") && !getIntent().hasExtra("widgetPage") && !getIntent().getBooleanExtra("reminderSettings",false);
             if(saved!=null) { page=saved.getInt("page",0); week=saved.getInt("week",week); showDone=saved.getBoolean("done");int[] offsets=saved.getIntArray("scrollOffsets");if(offsets!=null && offsets.length==3)System.arraycopy(offsets,0,scrollOffsets,0,3);timetableOffset=saved.getInt("timetableOffset",0); }
             render(); openIntent(getIntent());if(saved!=null && saved.getBoolean("overview"))shell.post(()->showOverview());
         } catch(Exception e) { failedLoad(e); }
@@ -58,6 +58,12 @@ public class MainActivity extends Activity {
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); openIntent(i); }
     void openIntent(Intent i) {
         if(!ready || i==null)return;
+        if(i.hasExtra("widgetPage")){
+            centerOnEntry=false;int target=i.getIntExtra("widgetPage",0);String course=i.getStringExtra("widgetCourse"),task=i.getStringExtra("widgetTask"),semester=i.getStringExtra("widgetSemester");boolean add=i.getBooleanExtra("widgetNewTask",false);
+            for(String key:new String[]{"widgetPage","widgetCourse","widgetTask","widgetSemester","widgetNewTask"})i.removeExtra(key);
+            if(editorDialog!=null)editorDialog.dismiss();if(detailDialog!=null)detailDialog.dismiss();
+            try{state=store.load();page=target==1?1:0;showDone=false;render();if(semester!=null && !semester.equals(state.id)){toast("学期已切换，请查看组件中的最新内容");ScheduleWidget.requestRefresh(this);return;}if(add)editTask(null,null);else if(course!=null && state.course(course)!=null)courseDetail(course);else if(task!=null && state.task(task)!=null)taskDetail(task,null);}catch(Exception e){toast(safeMessage(e));}return;
+        }
         if(i.hasExtra("taskId") || i.getBooleanExtra("reminderSettings",false))centerOnEntry=false;
         if(i.hasExtra("taskId")) {
             String id=i.getStringExtra("taskId");i.removeExtra("taskId");
@@ -95,7 +101,7 @@ public class MainActivity extends Activity {
         try { State old=state; state=store.update(action);syncReminders(old);week=Math.max(1,Math.min(week,state.weeks));render(); return true; }
         catch(Exception e){ toast(safeMessage(e));return false; }
     }
-    void syncReminders(State old) { try{Reminders.sync(this,old,state);}catch(Exception e){toast("数据已保存，但提醒安排失败；请在设置中检查提醒状态。");} }
+    void syncReminders(State old) { try{Reminders.sync(this,old,state);}catch(Exception e){toast("数据已保存，但提醒安排失败；请在设置中检查提醒状态。");}ScheduleWidget.requestRefresh(this); }
     void rememberScroll(){if(pageScroll!=null && pageScrollReady && renderedPage>=0){scrollOffsets[renderedPage]=pageScroll.getScrollY();if(timetableScroll!=null)timetableOffset=timetableScroll.getScrollX();}}
     void render(){
         if(!ready)return;
@@ -375,6 +381,7 @@ public class MainActivity extends Activity {
         reminders.addView(button("安排一分钟后测试提醒",()->{Task test=new Task();test.title="一分钟提醒测试";test.date=LocalDate.now().plusDays(1).toString();test.reminder=LocalDateTime.now().plusMinutes(1).withNano(0).toString();test.notes="由提醒测试创建，可测试后删除。";if(commit(s->s.tasks.add(test))){ensureNotifications();toast("已添加测试任务，提醒时间："+test.reminder.replace('T',' '));}}));
         reminders.addView(text(Reminders.diagnostics(this),12,MUTED));
         reminders.addView(text("所有学期的提醒都会安排。重启或重新打开后，会补发过去 24 小时内未送达的提醒。系统强制停止应用后，需要重新打开。",12,MUTED));
+        LinearLayout widget=card(body);widget.addView(title("桌面组件",18));space(widget,6);widget.addView(text("4×3 双栏：今日剩余课程与当前学期未完成日程，左右分别滚动。点击条目打开详情，完成操作在 App 内进行。",13,MUTED));widget.addView(button("添加到桌面",()->{android.appwidget.AppWidgetManager manager=android.appwidget.AppWidgetManager.getInstance(this);if(manager.isRequestPinAppWidgetSupported()){if(!manager.requestPinAppWidget(new ComponentName(this,ScheduleWidget.class),null,null))toast("请长按桌面空白处，在小组件中选择 Schedule++");}else toast("请长按桌面空白处，在小组件中选择 Schedule++");}));
         LinearLayout visuals=card(body);visuals.addView(title("外观与背景",18));space(visuals,6);visuals.addView(text("清爽校园 · "+(appearance.dark?"深色":"浅色")+"外观",13,MUTED));visuals.addView(button("背景、卡片与深浅色",this::appearanceEditor));
         LinearLayout preferences=card(body);preferences.addView(title("课表与任务偏好",18));preferences.addView(button("课表显示内容",this::displayOptions));preferences.addView(button("管理任务模板",this::templateManager));
         LinearLayout backup=card(body);backup.addView(title("备份与恢复",18));space(backup,8);backup.addView(text("备份包含全部学期、课程和任务，兼容恢复旧版备份。文件为明文 JSON，请保存在你信任的位置。",13,MUTED));backup.addView(button("导出全部学期备份",()->exportPicker()));backup.addView(button("从备份恢复",()->restorePicker()));

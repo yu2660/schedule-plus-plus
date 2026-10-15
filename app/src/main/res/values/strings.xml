@@ -3,4 +3,14 @@
     <string name="course_weeks">第 %1$s 周 %2$s</string>
     <string name="opacity_value">卡片不透明度：%1$d%%（85%%–100%%）</string>
     <string name="mask_value">图片遮罩强度：%1$d%%（25%%–90%%）</string>
+    <string name="widget_name">Schedule++ · 今日课程与日程</string>
+    <string name="widget_description">当前学期的今日剩余课程与未完成日程，左右分别滚动，点击打开详情。</string>
+    <string name="widget_courses">剩余课程 · %1$d</string>
+    <string name="widget_tasks">待完成 · %1$d</string>
+    <string name="widget_course_preview">剩余课程</string>
+    <string name="widget_task_preview">待完成</string>
+    <string name="widget_no_courses">今天没有课程了</string>
+    <string name="widget_no_tasks">暂无未完成日程</string>
+    <string name="widget_refresh">刷新桌面组件</string>
+    <string name="widget_add">添加任务</string>
 </resources>

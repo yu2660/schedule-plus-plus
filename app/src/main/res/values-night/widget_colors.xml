@@ -1,0 +1,4 @@
+<resources>
+    <color name="widget_ink">#ECF1FA</color><color name="widget_muted">#ACB9CC</color><color name="widget_accent">#ADC3FF</color><color name="widget_danger">#FFACAA</color>
+    <color name="widget_surface">#1C283B</color><color name="widget_border">#4A5D7D</color><color name="widget_divider">#808296B6</color>
+</resources>

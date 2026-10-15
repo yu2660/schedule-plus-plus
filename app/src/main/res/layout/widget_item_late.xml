@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_item" android:layout_width="match_parent" android:layout_height="56dp" android:orientation="vertical" android:gravity="center_vertical" android:padding="3dp" android:background="?android:attr/selectableItemBackground">
+    <TextView android:id="@+id/widget_item_title" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="13sp" android:textStyle="bold" android:textColor="@color/widget_ink" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_item_meta" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/widget_muted" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+    <TextView android:id="@+id/widget_item_detail" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/widget_danger" android:includeFontPadding="false" android:maxLines="1" android:ellipsize="end" />
+</LinearLayout>

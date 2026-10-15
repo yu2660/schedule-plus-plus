@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:padding="8dp" android:background="@drawable/widget_background_light">
+    <LinearLayout android:id="@+id/widget_header" android:layout_width="match_parent" android:layout_height="28dp" android:layout_alignParentTop="true" android:gravity="center_vertical">
+        <TextView android:id="@+id/widget_date" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:text="@string/widget_name" android:textStyle="bold" android:textSize="12sp" android:gravity="center_vertical" android:maxLines="1" android:ellipsize="end" android:textColor="@color/widget_ink" />
+        <ImageView android:id="@+id/widget_refresh" android:layout_width="36dp" android:layout_height="match_parent" android:src="@drawable/widget_ic_refresh" android:scaleType="centerInside" android:contentDescription="@string/widget_refresh" />
+        <ImageView android:id="@+id/widget_add" android:layout_width="36dp" android:layout_height="match_parent" android:src="@drawable/widget_ic_add" android:scaleType="centerInside" android:contentDescription="@string/widget_add" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/widget_header" android:layout_alignParentBottom="true" android:baselineAligned="false">
+        <RelativeLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:paddingStart="0dp" android:paddingEnd="6dp">
+            <TextView android:id="@+id/widget_course_heading" android:layout_width="match_parent" android:layout_height="20dp" android:layout_alignParentTop="true" android:text="@string/widget_course_preview" android:textStyle="bold" android:textSize="12sp" android:gravity="center_vertical" android:textColor="@color/widget_ink" />
+            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/widget_course_heading" android:layout_alignParentBottom="true">
+                <ListView android:id="@+id/widget_courses" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="@android:color/transparent" android:dividerHeight="3dp" android:scrollbars="vertical" android:scrollbarStyle="insideOverlay" />
+                <TextView android:id="@+id/widget_course_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:text="@string/widget_no_courses" android:textSize="12sp" android:gravity="center" android:textColor="@color/widget_muted" />
+            </FrameLayout>
+        </RelativeLayout>
+        <ImageView android:layout_width="1dp" android:layout_height="match_parent" android:layout_marginTop="4dp" android:layout_marginBottom="4dp" android:background="@color/widget_divider" android:importantForAccessibility="no" />
+        <RelativeLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:paddingStart="6dp" android:paddingEnd="0dp">
+            <TextView android:id="@+id/widget_task_heading" android:layout_width="match_parent" android:layout_height="20dp" android:layout_alignParentTop="true" android:text="@string/widget_task_preview" android:textStyle="bold" android:textSize="12sp" android:gravity="center_vertical" android:textColor="@color/widget_ink" />
+            <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent" android:layout_below="@id/widget_task_heading" android:layout_alignParentBottom="true">
+                <ListView android:id="@+id/widget_tasks" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="@android:color/transparent" android:dividerHeight="3dp" android:scrollbars="vertical" android:scrollbarStyle="insideOverlay" />
+                <TextView android:id="@+id/widget_task_empty" android:layout_width="match_parent" android:layout_height="match_parent" android:text="@string/widget_no_tasks" android:textSize="12sp" android:gravity="center" android:textColor="@color/widget_muted" />
+            </FrameLayout>
+        </RelativeLayout>
+    </LinearLayout>
+</RelativeLayout>
