@@ -43,18 +43,18 @@ public final class OverviewView extends View {
     }
     @Override protected void onDraw(Canvas c){
         super.onDraw(c);State s=owner.state;if(s==null || getWidth()==0 || getHeight()==0)return;
-        int save=c.save();c.translate(panX,panY);c.scale(zoom,zoom);rect(c,0,0,getWidth(),getHeight(),MainActivity.BG);
+        int save=c.save();c.translate(panX,panY);c.scale(zoom,zoom);rect(c,0,0,getWidth(),getHeight(),owner.appearance.surface);
         int days=s.display.weekends?7:5;float a=axis(),h=header(),w=(getWidth()-a)/days,row=(getHeight()-h)/s.slots.size();
-        lines(c,"节次",0,0,a,h,MainActivity.MUTED,false);LocalDate monday=LocalDate.parse(s.monday).plusWeeks(owner.week-1);LocalDate today=LocalDate.now();LocalTime now=LocalTime.now();
-        for(int i=0;i<s.slots.size();i++){Slot slot=s.slots.get(i);lines(c,(i+1)+(s.display.time?"\n"+slot.start+"\n"+slot.end:""),0,h+i*row,a,h+(i+1)*row,MainActivity.MUTED,false);}
+        lines(c,"节次",0,0,a,h,owner.MUTED,false);LocalDate monday=LocalDate.parse(s.monday).plusWeeks(owner.week-1);LocalDate today=LocalDate.now();LocalTime now=LocalTime.now();
+        for(int i=0;i<s.slots.size();i++){Slot slot=s.slots.get(i);lines(c,(i+1)+(s.display.time?"\n"+slot.start+"\n"+slot.end:""),0,h+i*row,a,h+(i+1)*row,owner.MUTED,false);}
         for(int day=1;day<=days;day++){
             float l=a+(day-1)*w;boolean current=monday.plusDays(day-1).equals(today);
-            lines(c,MainActivity.DAYS[day-1]+"\n"+monday.plusDays(day-1).getDayOfMonth(),l,0,l+w,h,current?MainActivity.ACCENT:MainActivity.MUTED,true);
+            lines(c,MainActivity.DAYS[day-1]+"\n"+monday.plusDays(day-1).getDayOfMonth(),l,0,l+w,h,current?owner.ACCENT:owner.MUTED,true);
             for(CourseBlock block:courseBlocks(s,day,owner.week)){
                 float top=h+(block.first-1)*row,bottom=h+block.last*row;Course course=block.courses.isEmpty()?null:block.courses.get(0);
-                rect(c,l+1,top+1,l+w-1,bottom-1,course==null?(current?0xffE8E7F9:0xffEFF1F7):MainActivity.PASTELS[course.color]);
-                if(course!=null){String value=course.name+(s.display.location && !course.location.isEmpty()?"\n"+course.location:"")+(s.display.teacher && !course.teacher.isEmpty()?"\n"+course.teacher:"")+(s.display.time?"\n"+s.slots.get(block.first-1).start+"–"+s.slots.get(block.last-1).end:"")+(block.courses.size()>1?"\n重叠 "+block.courses.size()+" 门":"");lines(c,value,l+2,top+2,l+w-2,bottom-2,MainActivity.COLORS[course.color],true);
-                    if(current && !now.isBefore(LocalTime.parse(s.slots.get(block.first-1).start)) && now.isBefore(LocalTime.parse(s.slots.get(block.last-1).end))){paint.setColor(MainActivity.ACCENT);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(owner.dp(2));c.drawRect(l+2,top+2,l+w-2,bottom-2,paint);paint.setStyle(Paint.Style.FILL);}
+                rect(c,l+1,top+1,l+w-1,bottom-1,course==null?(current?owner.appearance.soft:owner.appearance.surface):owner.appearance.options.style==0?owner.PASTELS[course.color]:owner.appearance.surface);
+                if(course!=null){if(owner.appearance.options.style==1)rect(c,l+1,top+1,l+4,bottom-1,owner.COLORS[course.color]);if(owner.appearance.options.style==3){paint.setColor(owner.COLORS[course.color]);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(1);c.drawRect(l+1,top+1,l+w-1,bottom-1,paint);paint.setStyle(Paint.Style.FILL);}String value=course.name+(s.display.location && !course.location.isEmpty()?"\n"+course.location:"")+(s.display.teacher && !course.teacher.isEmpty()?"\n"+course.teacher:"")+(s.display.time?"\n"+s.slots.get(block.first-1).start+"–"+s.slots.get(block.last-1).end:"")+(block.courses.size()>1?"\n重叠 "+block.courses.size()+" 门":"");lines(c,value,l+2,top+2,l+w-2,bottom-2,owner.COLORS[course.color],true);
+                    if(current && !now.isBefore(LocalTime.parse(s.slots.get(block.first-1).start)) && now.isBefore(LocalTime.parse(s.slots.get(block.last-1).end))){paint.setColor(owner.ACCENT);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(owner.dp(2));c.drawRect(l+2,top+2,l+w-2,bottom-2,paint);paint.setStyle(Paint.Style.FILL);}
                 }
             }
         }c.restoreToCount(save);

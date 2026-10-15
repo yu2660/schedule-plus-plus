@@ -23,12 +23,15 @@ import static app.scheduleplus.Models.*;
 
 /** Android-native offline V1. No WebView, remote scripts, analytics or network permission. */
 public class MainActivity extends Activity {
-    static final int BG=0xffF6F7FB, INK=0xff202337, MUTED=0xff74798F, ACCENT=0xff5856D6;
-    static final int[] PASTELS={0xffE9E7FF,0xffDDF2EC,0xffFFECD9,0xffF8E1ED,0xffE0EEFF,0xffF1E9DA};
-    static final int[] COLORS={ACCENT,0xff237B66,0xffA35F1C,0xffA94C7C,0xff346EA9,0xff7A6943};
+    int BG,INK,MUTED,ACCENT;Appearance appearance;Appearance.Options pendingPhotoOptions;
+    int[] PASTELS;
+    int[] COLORS;
+    UndoChange undo;PopupWindow undoPopup;View undoBar,addAction;final Runnable expireUndo=()->{undo=null;if(undoPopup!=null){undoPopup.dismiss();undoPopup=null;}clearUndoUi();};
+    static final class UndoChange {String taskId,message;boolean before;long until;Dialog owner;Runnable refresh;}
     static final String[] DAYS={"周一","周二","周三","周四","周五","周六","周日"};
     Store store; State state; LinearLayout shell,body; int page=0,week=1; boolean showDone=false,ready=false;
     AlertDialog detailDialog,editorDialog;
+    Dialog photoDialog;
     Dialog overviewDialog; OverviewView overviewView;Runnable overviewRefresh;
     ScrollView pageScroll;
     HorizontalScrollView timetableScroll;
@@ -40,9 +43,10 @@ public class MainActivity extends Activity {
     final Handler handler=new Handler(Looper.getMainLooper());
     final Runnable clockTick=new Runnable(){ public void run(){ if(ready) render(); handler.postDelayed(this,60000); }};
     @Override public void onCreate(Bundle saved) {
-        super.onCreate(saved); store=new Store(this);
-        getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(Build.VERSION.SDK_INT>=27?Color.WHITE:ACCENT);
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|(Build.VERSION.SDK_INT>=27?View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0));
+        appearance=new Appearance(this);setTheme(appearance.dark?R.style.AppThemeDark:R.style.AppTheme);BG=appearance.bg;INK=appearance.ink;MUTED=appearance.muted;ACCENT=appearance.accent;PASTELS=appearance.fills;COLORS=appearance.colors;
+        super.onCreate(saved);store=new Store(this);if(saved!=null && saved.containsKey("pendingPhoto"))pendingPhotoOptions=Appearance.Options.decode(saved.getString("pendingPhoto"));
+        getWindow().setStatusBarColor(BG); getWindow().setNavigationBarColor(BG);
+        getWindow().getDecorView().setSystemUiVisibility(appearance.dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|(Build.VERSION.SDK_INT>=27?View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0));
         try {
             state=store.load(); ready=true;Reminders.ensureChannel(this); week=Math.max(1,Math.min(state.weeks,state.currentWeek(LocalDate.now())));
             centerOnEntry=saved==null && !getIntent().hasExtra("taskId") && !getIntent().getBooleanExtra("reminderSettings",false);
@@ -50,7 +54,7 @@ public class MainActivity extends Activity {
             render(); openIntent(getIntent());if(saved!=null && saved.getBoolean("overview"))shell.post(()->showOverview());
         } catch(Exception e) { failedLoad(e); }
     }
-    @Override protected void onSaveInstanceState(Bundle out) { rememberScroll();super.onSaveInstanceState(out); out.putInt("page",page);out.putInt("week",week);out.putBoolean("done",showDone);out.putIntArray("scrollOffsets",scrollOffsets.clone());out.putInt("timetableOffset",timetableOffset);out.putBoolean("overview",overviewDialog!=null && overviewDialog.isShowing()); }
+    @Override protected void onSaveInstanceState(Bundle out) { rememberScroll();super.onSaveInstanceState(out); out.putInt("page",page);out.putInt("week",week);out.putBoolean("done",showDone);out.putIntArray("scrollOffsets",scrollOffsets.clone());out.putInt("timetableOffset",timetableOffset);out.putBoolean("overview",overviewDialog!=null && overviewDialog.isShowing());if(pendingPhotoOptions!=null)out.putString("pendingPhoto",pendingPhotoOptions.encode()); }
     @Override protected void onNewIntent(Intent i) { super.onNewIntent(i); setIntent(i); openIntent(i); }
     void openIntent(Intent i) {
         if(!ready || i==null)return;
@@ -68,7 +72,7 @@ public class MainActivity extends Activity {
     }
     @Override protected void onPause(){ super.onPause(); handler.removeCallbacks(clockTick); }
     @Override protected void onStop(){super.onStop();if(ready && page==0 && !isChangingConfigurations() && editorDialog==null && detailDialog==null && overviewDialog==null)centerOnEntry=true;}
-    @Override protected void onDestroy(){ready=false;handler.removeCallbacks(clockTick);if(overviewDialog!=null){overviewDialog.setOnDismissListener(null);overviewDialog.dismiss();}if(editorDialog!=null)editorDialog.dismiss();if(detailDialog!=null)detailDialog.dismiss();super.onDestroy();}
+    @Override protected void onDestroy(){ready=false;handler.removeCallbacks(clockTick);handler.removeCallbacks(expireUndo);if(undoPopup!=null)undoPopup.dismiss();if(photoDialog!=null)photoDialog.dismiss();if(overviewDialog!=null){overviewDialog.setOnDismissListener(null);overviewDialog.dismiss();}if(editorDialog!=null)editorDialog.dismiss();if(detailDialog!=null)detailDialog.dismiss();super.onDestroy();}
     void failedLoad(Exception e) {
         new AlertDialog.Builder(this).setTitle("本地数据读取失败").setMessage("原数据已保留，没有覆盖。可以退出后检查文件，或从你导出的备份恢复。\n"+safeMessage(e))
             .setCancelable(false).setPositiveButton("选择备份",(d,w)->restorePicker()).setNegativeButton("退出",(d,w)->finish()).show();
@@ -76,15 +80,15 @@ public class MainActivity extends Activity {
     String safeMessage(Exception e) { return e.getMessage()==null?"请检查输入内容":e.getMessage(); }
     int dp(float x){ return (int)(x*getResources().getDisplayMetrics().density+0.5f); }
     GradientDrawable background(int color,int radius){ GradientDrawable d=new GradientDrawable(); d.setColor(color);d.setCornerRadius(dp(radius));return d; }
-    LinearLayout column(){ LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l; }
-    LinearLayout row(){ LinearLayout l=new LinearLayout(this);l.setOrientation(LinearLayout.HORIZONTAL);l.setGravity(Gravity.CENTER_VERTICAL);return l; }
+    LinearLayout column(){ LinearLayout l=new SpacedLayout(this);l.setOrientation(LinearLayout.VERTICAL);return l; }
+    LinearLayout row(){ LinearLayout l=new SpacedLayout(this);l.setOrientation(LinearLayout.HORIZONTAL);l.setGravity(Gravity.CENTER_VERTICAL);return l; }
     TextView text(String value,int size,int color){ TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);t.setGravity(Gravity.CENTER_VERTICAL);return t; }
     TextView title(String s,int size){ TextView t=text(s,size,INK);t.setTypeface(Typeface.DEFAULT,Typeface.BOLD);return t; }
     void space(LinearLayout l,int h){ View v=new View(this);l.addView(v,new LinearLayout.LayoutParams(1,dp(h))); }
     void label(LinearLayout l,String s){ TextView t=text(s,12,MUTED);t.setPadding(0,dp(12),0,dp(5));l.addView(t); }
     void weighted(LinearLayout l,View v){ l.addView(v,new LinearLayout.LayoutParams(0,ViewGroup.LayoutParams.WRAP_CONTENT,1)); }
-    Button button(String s,Runnable action){ Button b=new Button(this);b.setText(s);b.setTextSize(14);b.setAllCaps(false);b.setTextColor(ACCENT);b.setMinHeight(dp(48));b.setOnClickListener(v->action.run());return b; }
-    LinearLayout card(LinearLayout parent){ LinearLayout l=column();l.setPadding(dp(16),dp(14),dp(16),dp(14));l.setBackground(background(Color.WHITE,18));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);parent.addView(l,p);return l; }
+    Button button(String s,Runnable action){ Button b=new Button(this);b.setText(s);b.setTextSize(14);b.setAllCaps(false);b.setTextColor(ACCENT);b.setMinHeight(dp(48));b.setPadding(dp(12),dp(7),dp(12),dp(7));b.setElevation(0);b.setStateListAnimator(null);GradientDrawable fill=background(appearance.dark?appearance.soft:0xffDFE9FF,14);fill.setStroke(dp(1),appearance.dark?0xff4A5D7D:0xffAFC4EF);b.setBackground(new android.graphics.drawable.RippleDrawable(android.content.res.ColorStateList.valueOf(Appearance.alpha(ACCENT,12)),fill,null));b.setOnClickListener(v->action.run());return b; }
+    LinearLayout card(LinearLayout parent){ LinearLayout l=column();l.setPadding(dp(16),dp(14),dp(16),dp(14));l.setBackground(background(appearance.surface,20));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);parent.addView(l,p);return l; }
     void hint(LinearLayout parent,String heading,String detail){ LinearLayout c=card(parent);c.addView(title(heading,17));space(c,8);c.addView(text(detail,14,MUTED)); }
     void toast(String s){ Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
     boolean commit(Consumer<State> action) {
@@ -95,22 +99,27 @@ public class MainActivity extends Activity {
     void rememberScroll(){if(pageScroll!=null && pageScrollReady && renderedPage>=0){scrollOffsets[renderedPage]=pageScroll.getScrollY();if(timetableScroll!=null)timetableOffset=timetableScroll.getScrollX();}}
     void render(){
         if(!ready)return;
+        undoBar=null;
         rememberScroll();renderedPage=page;pageScrollReady=false;timetableScroll=null;timetableFocusView=null;
-        shell=column();shell.setBackgroundColor(BG);
+        shell=column();shell.setBackground(appearance.background());
         shell.setOnApplyWindowInsetsListener((v,in)->{ shell.setPadding(in.getSystemWindowInsetLeft(),in.getSystemWindowInsetTop(),in.getSystemWindowInsetRight(),in.getSystemWindowInsetBottom());return in; });
         setContentView(shell); shell.requestApplyInsets();
-        LinearLayout head=column();head.setPadding(dp(20),dp(16),dp(20),dp(12));
-        TextView brand=text("SCHEDULE++  /  把学习安排好",11,ACCENT);brand.setLetterSpacing(.08f);head.addView(brand);space(head,8);
-        head.addView(title(page==0?"我的课程表":page==1?"日程任务":"我的设置",28));
-        TextView term=text(state.semester+"  ▾  切换学期",13,ACCENT);term.setMinHeight(dp(48));term.setContentDescription("当前学期："+state.semester+"，点击切换学期");term.setOnClickListener(v->semesterPicker());head.addView(term);
-        if(!state.description.isEmpty()){TextView note=text(state.description,12,MUTED);note.setMaxLines(2);head.addView(note);}shell.addView(head);
+        LinearLayout head=column();head.setPadding(dp(18),dp(10),dp(18),dp(6));head.setBackground(background(Appearance.alpha(appearance.surface,92),20));
+        LinearLayout heading=row();weighted(heading,title(page==0?"课程表":page==1?"日程任务":"我的设置",23));TextView brand=text("SCHEDULE ++",10,MUTED);brand.setLetterSpacing(.12f);heading.addView(brand);head.addView(heading);
+        TextView term=text(state.semester+"  ▾",13,MUTED);term.setMinHeight(dp(32));term.setContentDescription("当前学期："+state.semester+"，点击切换学期");term.setOnClickListener(v->semesterPicker());head.addView(term);
+        if(!state.description.isEmpty()){TextView note=text(state.description,12,MUTED);note.setMaxLines(1);head.addView(note);}shell.addView(head);
+        if(page==0){LinearLayout toolbar=row();toolbar.setPadding(dp(16),0,dp(16),dp(10));Button previous=button("‹",()->{if(week>1){week--;render();}}),next=button("›",()->{if(week<state.weeks){week++;render();}});previous.setEnabled(week>1);next.setEnabled(week<state.weeks);toolbar.addView(previous,new LinearLayout.LayoutParams(dp(42),dp(48)));
+            LinearLayout center=column();Button select=button("第 "+week+" 周 ▾",this::pickWeek);center.addView(select,new LinearLayout.LayoutParams(-1,dp(36)));LocalDate monday=LocalDate.parse(state.monday).plusWeeks(week-1);TextView dates=text(monday.format(DateTimeFormatter.ofPattern("M/d"))+" — "+monday.plusDays(6).format(DateTimeFormatter.ofPattern("M/d")),11,MUTED);dates.setGravity(Gravity.CENTER);dates.setSingleLine(true);dates.setHorizontallyScrolling(false);dates.setAutoSizeTextTypeUniformWithConfiguration(8,11,1,android.util.TypedValue.COMPLEX_UNIT_SP);dates.setContentDescription("本周日期范围");center.addView(dates,new LinearLayout.LayoutParams(-1,dp(18)));weighted(toolbar,center);toolbar.addView(next,new LinearLayout.LayoutParams(dp(42),dp(48)));spaceHorizontal(toolbar,8);Button full=button("总览",this::showOverview);icon(full,"expand",18,false);full.setTextSize(12);full.setContentDescription("全屏课表总览");toolbar.addView(full,new LinearLayout.LayoutParams(dp(72),dp(48)));head.addView(toolbar);
+            if(canReturnToCurrentWeek())head.addView(button("回到本周",()->{week=state.currentWeek(LocalDate.now());render();}));
+        }
         ScrollView scroll=page==0?new DirectionLockedScrollView(this):new ScrollView(this);pageScroll=scroll;scroll.setFillViewport(true);body=column();body.setPadding(dp(16),dp(4),dp(16),dp(88));scroll.addView(body);
         FrameLayout viewport=new FrameLayout(this);viewport.addView(scroll,new FrameLayout.LayoutParams(-1,-1));
-        TextView add=text("＋",30,Color.WHITE);add.setGravity(Gravity.CENTER);add.setContentDescription("添加任务或课程");add.setBackground(background(ACCENT,28));add.setElevation(dp(6));add.setOnClickListener(v->addMenu());
-        FrameLayout.LayoutParams fab=new FrameLayout.LayoutParams(dp(56),dp(56),Gravity.END|Gravity.BOTTOM);fab.setMargins(dp(16),dp(16),dp(20),dp(16));viewport.addView(add,fab);shell.addView(viewport,new LinearLayout.LayoutParams(-1,0,1));
-        if(page==0) timetable();else if(page==1) agenda();else settings();
-        LinearLayout nav=row();nav.setBackgroundColor(Color.WHITE);String[] tabs={"▦  课程表","✓  日程","⚙  设置"};
-        for(int i=0;i<3;i++){final int n=i;Button b=button(tabs[i],()->{page=n;render();});b.setTextColor(i==page?ACCENT:MUTED);b.setBackground(background(i==page?0xffEFEEFF:Color.WHITE,14));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(60),1);p.setMargins(dp(4),dp(6),dp(4),dp(6));nav.addView(b,p);}shell.addView(nav);
+        TextView add=text("＋",30,appearance.onAccent);addAction=add;add.setGravity(Gravity.CENTER);add.setContentDescription("添加任务或课程");add.setBackground(background(ACCENT,28));add.setElevation(dp(6));add.setOnClickListener(v->addMenu());
+        FrameLayout.LayoutParams fab=new FrameLayout.LayoutParams(dp(56),dp(56),Gravity.END|Gravity.BOTTOM);fab.setMargins(dp(16),dp(16),dp(20),dp(undo!=null && undo.until>System.currentTimeMillis()?78:16));viewport.addView(add,fab);shell.addView(viewport,new LinearLayout.LayoutParams(-1,0,1));
+        if(page==0)timetable();else if(page==1)agenda();else settings();
+        showUndo(viewport);
+        LinearLayout nav=row();nav.setBackground(background(appearance.surface,0));String[] tabs={"课程表","日程","设置"};String[] symbols={"calendar","tasks","settings"};
+        for(int i=0;i<3;i++){final int n=i;Button b=button(tabs[i],()->{page=n;render();});b.setTextColor(i==page?ACCENT:MUTED);b.setContentDescription("导航："+tabs[i]);icon(b,symbols[i],22,true);b.setTextSize(11);b.setBackground(background(i==page?appearance.soft:appearance.surface,16));LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(62),1);p.setMargins(dp(4),dp(6),dp(4),dp(6));nav.addView(b,p);}shell.addView(nav);
         final int pageIndex=page,targetY=scrollOffsets[pageIndex],targetX=timetableOffset;final HorizontalScrollView horizontal=timetableScroll;final View focus=timetableFocusView;
         scroll.setOnScrollChangeListener((v,x,y,oldX,oldY)->{if(pageScroll==scroll && pageScrollReady)scrollOffsets[pageIndex]=y;});
         scroll.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener(){public void onGlobalLayout(){
@@ -126,13 +135,13 @@ public class MainActivity extends Activity {
         }});
         if(overviewRefresh!=null)overviewRefresh.run();
     }
-    void bottom(AlertDialog dialog){dialog.show();Window window=dialog.getWindow();if(window!=null){window.setGravity(Gravity.BOTTOM);window.setLayout(-1,-2);}}
+    void bottom(AlertDialog dialog){dialog.show();Window window=dialog.getWindow();if(window!=null){window.setGravity(Gravity.BOTTOM);window.setLayout(-1,-2);window.setBackgroundDrawable(background(appearance.surface,24));}for(int id:new int[]{-1,-2,-3})if(dialog.getButton(id)!=null)dialog.getButton(id).setTextColor(ACCENT);}
     void addMenu(){bottom(new AlertDialog.Builder(this).setTitle("添加到 Schedule++").setItems(new String[]{"添加任务","添加课程"},(d,w)->{if(w==0)editTask(null,null);else editCourse(null);}).create());}
     boolean canReturnToCurrentWeek(){int current=state.currentWeek(LocalDate.now());return current>=1 && current<=state.weeks && week!=current;}
     void showOverview(){
         if(overviewDialog!=null && overviewDialog.isShowing())return;
-        Dialog dialog=new Dialog(this,android.R.style.Theme_Material_Light_NoActionBar);overviewDialog=dialog;
-        LinearLayout root=column();root.setBackgroundColor(BG);root.setOnApplyWindowInsetsListener((v,in)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets edges=in.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(edges.left,edges.top,edges.right,edges.bottom);}else root.setPadding(in.getSystemWindowInsetLeft(),in.getSystemWindowInsetTop(),in.getSystemWindowInsetRight(),in.getSystemWindowInsetBottom());return in;});
+        Dialog dialog=new Dialog(this,appearance.dark?android.R.style.Theme_Material_NoActionBar:android.R.style.Theme_Material_Light_NoActionBar);overviewDialog=dialog;
+        LinearLayout root=column();root.setBackground(appearance.background());root.setOnApplyWindowInsetsListener((v,in)->{if(Build.VERSION.SDK_INT>=30){android.graphics.Insets edges=in.getInsetsIgnoringVisibility(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());root.setPadding(edges.left,edges.top,edges.right,edges.bottom);}else root.setPadding(in.getSystemWindowInsetLeft(),in.getSystemWindowInsetTop(),in.getSystemWindowInsetRight(),in.getSystemWindowInsetBottom());return in;});
         LinearLayout controls=row();Button previous=button("‹",()->{}),next=button("›",()->{}),select=button("第 "+week+" 周 ▾",()->{}),backToWeek=button("回到本周",()->{});
         Runnable update=()->{select.setText(getString(R.string.overview_week,week));backToWeek.setVisibility(canReturnToCurrentWeek()?View.VISIBLE:View.GONE);previous.setEnabled(week>1);next.setEnabled(week<state.weeks);overviewView.updateDescription();overviewView.invalidate();};
         previous.setContentDescription("总览上一周");next.setContentDescription("总览下一周");select.setContentDescription("总览选择周次");
@@ -141,41 +150,83 @@ public class MainActivity extends Activity {
         controls.addView(previous,new LinearLayout.LayoutParams(dp(48),dp(48)));weighted(controls,select);controls.addView(next,new LinearLayout.LayoutParams(dp(48),dp(48)));controls.addView(button("关闭",dialog::dismiss));root.addView(controls);
         LinearLayout tools=row();backToWeek.setOnClickListener(v->{week=state.currentWeek(LocalDate.now());update.run();});weighted(tools,backToWeek);weighted(tools,button("一键适配",()->overviewView.fit()));root.addView(tools);
         overviewView=new OverviewView(this,(day,section)->{List<Course> found=new ArrayList<>();for(Course c:state.courses)for(Meeting m:c.meetings)if(occurs(m,day,week,section)){found.add(c);break;}if(found.size()==1)courseDetail(found.get(0).id);else if(!found.isEmpty())chooseCourses(found);else editCourseAt(day,section);});
-        root.addView(overviewView,new LinearLayout.LayoutParams(-1,0,1));if(Build.VERSION.SDK_INT>=30)dialog.getWindow().setDecorFitsSystemWindows(false);dialog.getWindow().setStatusBarColor(BG);dialog.getWindow().setNavigationBarColor(BG);dialog.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|(Build.VERSION.SDK_INT>=27?View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0));dialog.setContentView(root);dialog.setOnDismissListener(d->{overviewDialog=null;overviewView=null;overviewRefresh=null;render();});dialog.show();dialog.getWindow().setLayout(-1,-1);root.requestApplyInsets();overviewRefresh=update;update.run();
+        root.addView(overviewView,new LinearLayout.LayoutParams(-1,0,1));if(Build.VERSION.SDK_INT>=30)dialog.getWindow().setDecorFitsSystemWindows(false);dialog.getWindow().setStatusBarColor(BG);dialog.getWindow().setNavigationBarColor(BG);dialog.getWindow().getDecorView().setSystemUiVisibility(appearance.dark?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR|(Build.VERSION.SDK_INT>=27?View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR:0));dialog.setContentView(root);dialog.setOnDismissListener(d->{overviewDialog=null;overviewView=null;overviewRefresh=null;render();});dialog.show();dialog.getWindow().setLayout(-1,-1);root.requestApplyInsets();overviewRefresh=update;update.run();
     }
+    void spaceHorizontal(LinearLayout row,int width){row.addView(new View(this),new LinearLayout.LayoutParams(dp(width),1));}
+    void icon(Button button,String name,int size,boolean top){Glyph d=new Glyph(name,button.getCurrentTextColor());d.setBounds(0,0,dp(size),dp(size));button.setCompoundDrawablePadding(dp(4));if(top)button.setCompoundDrawables(null,d,null,null);else button.setCompoundDrawables(d,null,null,null);}
+    android.graphics.drawable.Drawable courseBackground(Appearance skin,int color,GradientDrawable fill){if(skin.options.style!=1)return fill;android.graphics.drawable.LayerDrawable layers=new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{background(skin.colors[color],12),fill});layers.setLayerInset(1,dp(4),0,0,0);return layers;}
+    TextView chip(String value,int color){TextView t=text(value,11,color);t.setPadding(dp(9),dp(4),dp(9),dp(4));t.setBackground(background(Appearance.alpha(color,appearance.dark?16:8),8));return t;}
+    void pickWeek(){String[] names=new String[state.weeks];for(int i=0;i<names.length;i++)names[i]="第 "+(i+1)+" 周";new AlertDialog.Builder(this).setTitle("选择教学周").setSingleChoiceItems(names,week-1,(d,w)->{week=w+1;d.dismiss();render();}).setNegativeButton("取消",null).show();}
+    void clearUndoUi(){if(undoBar!=null && undoBar.getParent() instanceof ViewGroup)((ViewGroup)undoBar.getParent()).removeView(undoBar);undoBar=null;if(addAction!=null && addAction.getLayoutParams() instanceof FrameLayout.LayoutParams){FrameLayout.LayoutParams p=(FrameLayout.LayoutParams)addAction.getLayoutParams();p.bottomMargin=dp(16);addAction.setLayoutParams(p);}}
+    void showUndo(FrameLayout viewport){if(undo==null || undo.until<=System.currentTimeMillis())return;UndoChange change=undo;LinearLayout bar=row();bar.setPadding(dp(16),dp(4),dp(6),dp(4));bar.setBackground(background(appearance.ink,16));TextView label=text(change.message,13,appearance.surface);weighted(bar,label);Button action=button("撤销",()->undoChange(change));action.setTextColor(appearance.surface);action.setBackgroundColor(Color.TRANSPARENT);bar.addView(action);FrameLayout.LayoutParams p=new FrameLayout.LayoutParams(-1,dp(54),Gravity.BOTTOM);p.setMargins(dp(16),0,dp(16),dp(12));viewport.addView(bar,p);undoBar=bar;}
+    void changeDone(Task task,boolean value,Runnable refresh){boolean before=task.done;if(commit(s->{Task found=s.findTask(task.id);if(found!=null)found.done=value;})){UndoChange next=new UndoChange();next.taskId=task.id;next.before=before;next.message=value?"已完成任务":"已恢复为未完成";next.until=System.currentTimeMillis()+6000;next.owner=detailDialog;next.refresh=refresh;undo=next;handler.removeCallbacks(expireUndo);handler.postDelayed(expireUndo,6000);render();if(refresh!=null)refresh.run();next.owner=detailDialog;if(detailDialog!=null && detailDialog.isShowing())showSheetUndo(next);}}
+    void undoChange(UndoChange change){if(commit(s->{Task t=s.findTask(change.taskId);if(t!=null)t.done=change.before;})){undo=null;handler.removeCallbacks(expireUndo);if(undoPopup!=null){undoPopup.dismiss();undoPopup=null;}render();if(change.owner==detailDialog && detailDialog!=null && detailDialog.isShowing() && change.refresh!=null)change.refresh.run();}}
+    void showSheetUndo(UndoChange change){if(undoPopup!=null)undoPopup.dismiss();LinearLayout bar=row();bar.setPadding(dp(16),dp(4),dp(8),dp(4));bar.setBackground(background(appearance.ink,16));weighted(bar,text(change.message,13,appearance.surface));Button button=button("撤销",()->undoChange(change));button.setBackgroundColor(Color.TRANSPARENT);button.setTextColor(appearance.surface);bar.addView(button);undoPopup=new PopupWindow(bar,getResources().getDisplayMetrics().widthPixels-dp(32),dp(54),false);undoPopup.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));undoPopup.setElevation(dp(4));undoPopup.showAtLocation(detailDialog.getWindow().getDecorView(),Gravity.BOTTOM|Gravity.CENTER_HORIZONTAL,0,dp(72));}
+    EditText colorField(LinearLayout parent,String heading,String value){
+        label(parent,heading+"（点击色块选色，也可填写 #RRGGBB）");LinearLayout line=row();EditText input=new EditText(this);input.setSingleLine(true);input.setText(value);Button swatch=button("",()->colorPalette(input));swatch.setContentDescription("选择颜色："+value);line.addView(swatch,new LinearLayout.LayoutParams(dp(52),dp(48)));weighted(line,input);parent.addView(line);
+        Runnable update=()->{String color=input.getText().toString().trim();if(color.matches("#[0-9a-fA-F]{6}")){GradientDrawable fill=background(Color.parseColor(color),10);fill.setStroke(dp(1),MUTED);swatch.setBackground(fill);swatch.setContentDescription("选择颜色："+color);}};input.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){update.run();}public void afterTextChanged(android.text.Editable e){}});update.run();return input;
+    }
+    void colorPalette(EditText target){
+        String[] names={"海盐蓝","薄荷绿","暖杏色","薰衣紫","樱花粉","燕麦色","云朵白","浅雾灰","晴空蓝","森林绿","日落橙","葡萄紫","深海蓝","墨绿色","石墨灰","纯黑色"};String[] colors={"#E4EEFF","#E0F3EC","#FFF0DC","#EEEAFE","#FCE5EF","#F2EDDF","#FFFFFF","#E9EDF3","#8DB8F2","#86CDB0","#EEB47D","#B8A5DE","#243C60","#294C45","#3C4656","#101827"};LinearLayout content=form();AlertDialog dialog=new AlertDialog.Builder(this).setTitle("选择背景颜色").setView(content).setNegativeButton("取消",null).create();for(int i=0;i<colors.length;i+=4){LinearLayout line=row();for(int j=i;j<Math.min(i+4,colors.length);j++){String color=colors[j];Button option=button(names[j],()->{target.setText(color);dialog.dismiss();});int fill=Color.parseColor(color);GradientDrawable tile=background(fill,10);tile.setStroke(dp(1),0xff8296B6);option.setBackground(tile);option.setTextColor(Color.red(fill)*.299+Color.green(fill)*.587+Color.blue(fill)*.114>150?0xff1C2C48:Color.WHITE);option.setTextSize(11);option.setPadding(dp(3),dp(8),dp(3),dp(8));option.setContentDescription(names[j]+" "+color);option.setSelected(color.equalsIgnoreCase(target.getText().toString()));weighted(line,option);}content.addView(line);}bottom(dialog);
+    }
+    ArrayAdapter<String> courseColorAdapter(){return new ArrayAdapter<String>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"鸢尾紫","薄荷绿","杏子橙","蔷薇粉","晴空蓝","燕麦棕"}){
+        View decorate(View view,int position){TextView label=(TextView)view;GradientDrawable color=background(PASTELS[position],6);color.setStroke(dp(1),COLORS[position]);color.setBounds(0,0,dp(28),dp(28));label.setCompoundDrawables(color,null,null,null);label.setCompoundDrawablePadding(dp(12));label.setTextColor(INK);label.setMinHeight(dp(48));label.setPadding(dp(12),dp(6),dp(12),dp(6));return label;}
+        @Override public View getView(int position,View convert,ViewGroup parent){return decorate(super.getView(position,convert,parent),position);}
+        @Override public View getDropDownView(int position,View convert,ViewGroup parent){return decorate(super.getDropDownView(position,convert,parent),position);}
+    };}
+    SeekBar appearanceSlider(String name,int max,int progress){SeekBar bar=new SeekBar(this);bar.setContentDescription(name);bar.setMax(max);bar.setProgress(progress);bar.setMinimumHeight(dp(48));bar.setPadding(dp(14),0,dp(14),0);android.content.res.ColorStateList tint=android.content.res.ColorStateList.valueOf(ACCENT);bar.setProgressTintList(tint);bar.setThumbTintList(tint);return bar;}
+    void appearanceEditor(){
+        Appearance.Options draft=appearance.options.copy();LinearLayout f=form();label(f,"清爽校园 · 外观预览");LinearLayout preview=column();preview.setPadding(dp(16),dp(16),dp(16),dp(16));LinearLayout sample=column();sample.setPadding(dp(14),dp(12),dp(14),dp(12));TextView sampleName=title("高等数学",17),samplePlace=text("教学楼 A102 · 08:00–09:40",12,MUTED);sample.addView(sampleName);sample.addView(samplePlace);preview.addView(sample);f.addView(preview,new LinearLayout.LayoutParams(-1,dp(104)));
+        Spinner mode=spinner(f,"深浅色模式",new String[]{"跟随系统","浅色","深色"},draft.mode),background=spinner(f,"背景来源",new String[]{"纯色","渐变","相册图片"},draft.background),style=spinner(f,"课程卡片样式",new String[]{"柔和彩色","左侧色条","半透明卡片","简洁描边"},draft.style);
+        EditText first=colorField(f,"背景颜色 / 渐变起点",draft.start),last=colorField(f,"渐变终点",draft.end);first.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(7)});last.setFilters(new android.text.InputFilter[]{new android.text.InputFilter.LengthFilter(7)});
+        label(f,"当前模式的实际背景预览");View gradientSample=new View(this);gradientSample.setContentDescription("当前背景颜色预览");f.addView(gradientSample,new LinearLayout.LayoutParams(-1,dp(32)));
+        TextView colorHint=text("",12,MUTED);f.addView(colorHint);
+        TextView opacityValue=title("",14);space(f,14);f.addView(opacityValue);SeekBar opacity=appearanceSlider("卡片不透明度",15,draft.opacity-85);f.addView(opacity);TextView opacityHint=text("",12,MUTED);f.addView(opacityHint);Button enableGlass=button("使用半透明卡片",()->style.setSelection(2));f.addView(enableGlass);
+        LinearLayout localPreview=column();localPreview.setPadding(dp(12),dp(12),dp(12),dp(12));TextView localCourse=title("高等数学 · 卡片效果预览",14);localCourse.setPadding(dp(12),dp(12),dp(12),dp(12));localPreview.addView(localCourse);f.addView(localPreview,new LinearLayout.LayoutParams(-1,dp(80)));
+        TextView maskValue=title("",14);space(f,14);f.addView(maskValue);SeekBar mask=appearanceSlider("图片遮罩强度",65,draft.mask-25);f.addView(mask);TextView maskHint=text("",12,MUTED);f.addView(maskHint);Button enablePhoto=button("使用已选的相册背景",()->background.setSelection(2));f.addView(enablePhoto);View photoPreview=new View(this);photoPreview.setContentDescription("图片遮罩效果预览");f.addView(photoPreview,new LinearLayout.LayoutParams(-1,dp(110)));
+        Runnable read=()->{draft.mode=mode.getSelectedItemPosition();draft.background=background.getSelectedItemPosition();draft.style=style.getSelectedItemPosition();draft.start=first.getText().toString().trim();draft.end=last.getText().toString().trim();draft.opacity=opacity.getProgress()+85;draft.mask=mask.getProgress()+25;draft.validate();};
+        Runnable update=()->{try{read.run();Appearance skin=new Appearance(this,draft.copy());preview.setBackground(skin.background());GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TL_BR,new int[]{skin.backgroundColor(draft.start),skin.backgroundColor(draft.background==0?draft.start:draft.end)});gradient.setCornerRadius(dp(8));gradient.setStroke(dp(1),0xff8296B6);gradientSample.setBackground(draft.background==2 && appearance.photoFile().exists()?skin.background():gradient);colorHint.setText(skin.dark?"深色模式会压暗背景，预览显示实际效果；输入色块显示原始颜色。":"预览显示当前模式的实际背景；输入色块显示原始颜色。");sample.setBackground(courseBackground(skin,0,skin.course(0,dp(14),false)));sampleName.setTextColor(skin.colors[0]);samplePlace.setTextColor(skin.muted);
+            boolean glass=draft.style==2,photo=draft.background==2 && appearance.photoFile().exists();opacityValue.setText(getString(R.string.opacity_value,draft.opacity));opacity.setEnabled(glass);opacity.setVisibility(glass?View.VISIBLE:View.GONE);enableGlass.setVisibility(glass?View.GONE:View.VISIBLE);opacityHint.setText(glass?"向左拖动更透明，向右更实；保留至少 85% 不透明度便于阅读。":"仅对半透明卡片生效，点击下方按钮启用。");localPreview.setVisibility(glass?View.VISIBLE:View.GONE);localPreview.setBackground(skin.background());localCourse.setBackground(skin.course(0,dp(12),false));localCourse.setTextColor(skin.colors[0]);
+            maskValue.setText(getString(R.string.mask_value,draft.mask));mask.setEnabled(photo);mask.setVisibility(photo?View.VISIBLE:View.GONE);enablePhoto.setVisibility(!photo && appearance.photoFile().exists()?View.VISIBLE:View.GONE);maskHint.setText(photo?"向左保留更多原图，向右增强遮罩；下方实时预览。":appearance.photoFile().exists()?"仅对相册背景生效，点击下方按钮启用。":"仅对相册背景生效，请先点击下方按钮选择图片。");photoPreview.setVisibility(photo?View.VISIBLE:View.GONE);if(photo)photoPreview.setBackground(skin.background());
+        }catch(IllegalArgumentException ignored){}};
+        AdapterView.OnItemSelectedListener selected=new AdapterView.OnItemSelectedListener(){public void onNothingSelected(AdapterView<?> p){}public void onItemSelected(AdapterView<?> p,View v,int i,long id){update.run();}};mode.setOnItemSelectedListener(selected);background.setOnItemSelectedListener(selected);style.setOnItemSelectedListener(selected);
+        android.text.TextWatcher watcher=new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){update.run();}public void afterTextChanged(android.text.Editable e){}};first.addTextChangedListener(watcher);last.addTextChangedListener(watcher);
+        SeekBar.OnSeekBarChangeListener slider=new SeekBar.OnSeekBarChangeListener(){public void onStartTrackingTouch(SeekBar b){b.getParent().requestDisallowInterceptTouchEvent(true);}public void onStopTrackingTouch(SeekBar b){b.getParent().requestDisallowInterceptTouchEvent(false);}public void onProgressChanged(SeekBar b,int progress,boolean user){update.run();}};opacity.setOnSeekBarChangeListener(slider);mask.setOnSeekBarChangeListener(slider);
+        final AlertDialog[] dialog={null};dialog[0]=formDialog("外观与背景",f,()->{try{read.run();if(draft.background==2 && !appearance.photoFile().exists()){toast("请先从相册选择一张背景图片");return;}appearance.save(draft);dialog[0].dismiss();recreate();}catch(Exception e){toast(safeMessage(e));}});
+        f.addView(button("从相册选择图片",()->{try{read.run();pendingPhotoOptions=draft.copy();dialog[0].dismiss();startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).setType("image/*").addCategory(Intent.CATEGORY_OPENABLE),92);}catch(Exception e){toast(safeMessage(e));}}));
+        f.addView(button("恢复清爽校园默认外观",()->confirm("恢复默认外观？","课程、任务和学期保持不变。",()->{appearance.save(new Appearance.Options());dialog[0].dismiss();recreate();})));
+        f.addView(text("背景图片与外观设置仅保存在当前设备，不纳入课程 JSON 备份。相册图片只读取你选择的一张，裁剪后保存在应用私有目录。",12,MUTED));dialog[0].show();update.run();
+    }
+    void cropPhoto(android.graphics.Bitmap image){
+        Dialog dialog=new Dialog(this,appearance.dark?android.R.style.Theme_Material_NoActionBar:android.R.style.Theme_Material_Light_NoActionBar);photoDialog=dialog;dialog.setOnDismissListener(d->{if(photoDialog==dialog)photoDialog=null;});LinearLayout root=column();root.setBackgroundColor(BG);root.setPadding(dp(16),dp(16),dp(16),dp(16));root.addView(title("调整背景图片",23));root.addView(text("拖动调整位置，双指缩放。图片只保存在本机。",12,MUTED));CropView crop=new CropView(this,image);root.addView(button("旋转 90°",crop::rotate));LinearLayout.LayoutParams size=new LinearLayout.LayoutParams(-1,0,1);size.topMargin=dp(12);size.bottomMargin=dp(12);root.addView(crop,size);LinearLayout actions=row();weighted(actions,button("取消",dialog::dismiss));weighted(actions,button("使用此背景",()->{android.graphics.Bitmap result=null;try{result=crop.cropped();appearance.writePhoto(result);Appearance.Options selected=pendingPhotoOptions==null?appearance.options.copy():pendingPhotoOptions;selected.background=2;appearance.save(selected);pendingPhotoOptions=null;dialog.dismiss();recreate();}catch(Exception e){toast(safeMessage(e));}finally{if(result!=null)result.recycle();}}));root.addView(actions);dialog.setContentView(root);dialog.show();dialog.getWindow().setLayout(-1,-1);}
     void timetable(){
-        LinearLayout controls=row();weighted(controls,button("‹",()->{if(week>1){week--;render();}}));
-        Button selector=button("第 "+week+" 周 ▾",()->{String[] choices=new String[state.weeks];for(int i=0;i<choices.length;i++)choices[i]="第 "+(i+1)+" 周";new AlertDialog.Builder(this).setTitle("选择教学周").setSingleChoiceItems(choices,week-1,(d,w)->{week=w+1;d.dismiss();render();}).show();});
-        controls.addView(selector,new LinearLayout.LayoutParams(0,-2,3));weighted(controls,button("›",()->{if(week<state.weeks){week++;render();}}));body.addView(controls);
         int current=state.currentWeek(LocalDate.now());LocalDate monday=LocalDate.parse(state.monday).plusWeeks(week-1);
-        LinearLayout dates=row();weighted(dates,text(monday.format(DateTimeFormatter.ofPattern("M月d日"))+" — "+monday.plusDays(6).format(DateTimeFormatter.ofPattern("M月d日")),12,MUTED));if(canReturnToCurrentWeek())dates.addView(button("回到本周",()->{week=current;render();}));body.addView(dates);
-        if(current<1 || current>state.weeks)body.addView(text("当前日期不在本学期内，正在查看第 "+week+" 周",12,MUTED));
-        body.addView(button("全屏课表总览",this::showOverview));
+        if(current<1 || current>state.weeks)body.addView(text("当前日期不在本学期，正在查看第 "+week+" 周",12,MUTED));
         if(state.courses.isEmpty()){space(body,12);hint(body,"从第一门课开始","先在设置里调整学期和作息，再添加课程。点击右下角 ＋ 随时记录任务。");body.addView(button("添加第一门课程",()->editCourse(null)));return;}
         // A minimum column width keeps course names readable on narrow screens.
         HorizontalScrollView horizontal=((DirectionLockedScrollView)pageScroll).createHorizontalScroller();timetableScroll=horizontal;horizontal.setHorizontalScrollBarEnabled(false);
         LinearLayout table=row();table.setGravity(Gravity.TOP);
         LinearLayout grid=row();grid.setGravity(Gravity.TOP);int cellWidth=Math.max(76,(int)(getResources().getDisplayMetrics().widthPixels/getResources().getDisplayMetrics().density-80)/(state.display.weekends?7:5));
-        LinearLayout axis=column();axis.setContentDescription("固定节次与时间栏");axis.setBackgroundColor(BG);axis.addView(text("节次",11,MUTED),new LinearLayout.LayoutParams(dp(48),dp(48)));
+        LinearLayout axis=column();axis.setContentDescription("固定节次与时间栏");axis.setBackground(background(Appearance.alpha(appearance.surface,92),12));axis.addView(text("节次",11,MUTED),new LinearLayout.LayoutParams(dp(48),dp(48)));
         for(int i=0;i<state.slots.size();i++){Slot p=state.slots.get(i);TextView t=text((i+1)+(state.display.time?"\n"+p.start+"\n"+p.end:""),10,MUTED);t.setGravity(Gravity.CENTER);axis.addView(t,new LinearLayout.LayoutParams(dp(48),dp(66)));}table.addView(axis,new LinearLayout.LayoutParams(dp(48),-2));
         TimetableFocus focus=centerOnEntry && week==state.currentWeek(LocalDate.now())?timetableFocus(state,LocalDateTime.now(),state.display.weekends):null;
         for(int day=1;day<=(state.display.weekends?7:5);day++){
             final int chosenDay=day;LinearLayout col=column();LocalDate date=monday.plusDays(day-1);boolean today=date.equals(LocalDate.now());
-            TextView header=text(DAYS[day-1]+"\n"+date.getDayOfMonth(),12,today?ACCENT:MUTED);header.setGravity(Gravity.CENTER);col.addView(header,new LinearLayout.LayoutParams(dp(cellWidth),dp(48)));
+            TextView header=text(DAYS[day-1]+"\n"+date.getDayOfMonth(),12,today?ACCENT:MUTED);header.setGravity(Gravity.CENTER);header.setBackground(background(Appearance.alpha(appearance.surface,92),10));col.addView(header,new LinearLayout.LayoutParams(dp(cellWidth),dp(48)));
             for(CourseBlock block:courseBlocks(state,day,week)){
                 final int selectedSection=block.first;List<Course> matching=block.courses;int span=block.last-block.first+1;
                 LinearLayout cell=column();cell.setPadding(dp(6),dp(6),dp(4),dp(3));
                 if(focus!=null && focus.day==day && focus.first==block.first && focus.last==block.last)timetableFocusView=cell;
                 if(!matching.isEmpty()){
-                    Course c=matching.get(0);GradientDrawable fill=background(PASTELS[c.color],10);
+                    Course c=matching.get(0);GradientDrawable fill=appearance.course(c.color,dp(12),false);
                     LocalTime now=LocalTime.now();if(today && !now.isBefore(LocalTime.parse(state.slots.get(block.first-1).start)) && now.isBefore(LocalTime.parse(state.slots.get(block.last-1).end)))fill.setStroke(dp(2),ACCENT);
-                    cell.setBackground(fill);TextView name=title(c.name,13);name.setTextColor(COLORS[c.color]);name.setMaxLines(Math.max(1,span*2));name.setEllipsize(android.text.TextUtils.TruncateAt.END);cell.addView(name);
+                    cell.setBackground(courseBackground(appearance,c.color,fill));TextView name=title(c.name,13);name.setTextColor(COLORS[c.color]);name.setMaxLines(Math.max(1,span*2));name.setEllipsize(android.text.TextUtils.TruncateAt.END);cell.addView(name);
                     if(state.display.location && !c.location.isEmpty()){TextView place=text(c.location,11,MUTED);place.setMaxLines(1);place.setEllipsize(android.text.TextUtils.TruncateAt.END);cell.addView(place);}
                     if(state.display.teacher && !c.teacher.isEmpty()){TextView teacher=text(c.teacher,10,MUTED);teacher.setMaxLines(1);cell.addView(teacher);}
                     if(state.display.time){TextView duration=text(state.slots.get(block.first-1).start+"–"+state.slots.get(block.last-1).end,10,MUTED);duration.setMaxLines(1);cell.addView(duration);}
                     if(matching.size()>1)cell.addView(text("重叠 "+matching.size()+" 门",10,COLORS[c.color]));
                     cell.setContentDescription(DAYS[day-1]+" 第"+block.first+"至"+block.last+"节 "+c.name);cell.setOnClickListener(v->{if(matching.size()==1)courseDetail(c.id);else chooseCourses(matching);});
-                }else{cell.setBackground(background(today?0xffE8E7F9:0xffEFF1F7,10));cell.setContentDescription(DAYS[day-1]+" 第"+block.first+"节，添加课程");cell.setOnClickListener(v->editCourseAt(chosenDay,selectedSection));}
+                }else{cell.setBackground(background(today?Appearance.alpha(appearance.soft,95):Appearance.alpha(appearance.surface,55),10));cell.setContentDescription(DAYS[day-1]+" 第"+block.first+"节，添加课程");cell.setOnClickListener(v->editCourseAt(chosenDay,selectedSection));}
                 LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(dp(cellWidth-4),dp(66*span-4));p.setMargins(dp(2),dp(2),dp(2),dp(2));col.addView(cell,p);
             }grid.addView(col);
         }horizontal.addView(grid);table.addView(horizontal,new LinearLayout.LayoutParams(0,-2,1));body.addView(table);space(body,12);body.addView(text("横滑看星期 · 竖滑看节次 · 点击课程查看任务",12,MUTED));
@@ -183,7 +234,7 @@ public class MainActivity extends Activity {
     void chooseCourses(List<Course> courses){String[] names=new String[courses.size()];for(int i=0;i<names.length;i++)names[i]=courses.get(i).name;bottom(new AlertDialog.Builder(this).setTitle("这个节次有重叠课程").setItems(names,(d,w)->courseDetail(courses.get(w).id)).create());}
     void agenda(){
         LinearLayout stats=card(body);int pending=0,late=0;for(Task t:state.tasks)if(!t.done){pending++;if(t.deadline().isBefore(LocalDateTime.now()))late++;}
-        stats.addView(title(pending+" 项待完成",24));stats.addView(text(late==0?"按自己的节奏，逐项完成":"其中 "+late+" 项已逾期",13,late==0?MUTED:0xffB34053));
+        stats.addView(title(pending+" 项待完成",24));stats.addView(text(late==0?"按自己的节奏，逐项完成":"其中 "+late+" 项已逾期",13,late==0?MUTED:appearance.danger));
         LinearLayout filters=row();weighted(filters,button(showDone?"待完成":"● 待完成",()->{showDone=false;render();}));weighted(filters,button(showDone?"● 已完成":"已完成",()->{showDone=true;render();}));body.addView(filters);
         List<Task> tasks=state.sortedTasks(null,showDone);String last="";
         if(tasks.isEmpty())hint(body,showDone?"还没有完成记录":"暂时没有待办","点击右下角 ＋ 添加作业、报告、考试或个人安排。");
@@ -194,36 +245,47 @@ public class MainActivity extends Activity {
         taskCard(parent,t,owner,null);
     }
     void taskCard(LinearLayout parent,Task t,Dialog owner,Runnable refresh){
-        LinearLayout c=card(parent),line=row();CheckBox done=new CheckBox(this);done.setChecked(t.done);done.setContentDescription(t.done?"恢复任务："+t.title:"完成任务："+t.title);
-        done.setOnClickListener(v->{boolean value=done.isChecked();if(commit(s->{Task x=s.task(t.id);if(x!=null)x.done=value;})){if(refresh!=null)refresh.run();}else done.setChecked(t.done);});line.addView(done);
-        TextView name=title(t.title,16);weighted(line,name);c.addView(line);
-        Course course=state.course(t.courseId);TextView meta=text((course==null?"个人任务":course.name)+"  ·  "+t.date+(t.time==null?" 截止":" "+t.time+" 截止"),12,!t.done && t.deadline().isBefore(LocalDateTime.now())?0xffB34053:MUTED);c.addView(meta);
-        c.addView(text(t.done?"已完成":relativeDeadline(t,LocalDateTime.now()),12,!t.done && t.deadline().isBefore(LocalDateTime.now())?0xffB34053:MUTED));
-        if(!t.notes.isEmpty()){space(c,7);TextView notes=text(t.notes,13,MUTED);notes.setMaxLines(3);c.addView(notes);}
-        if(t.reminder!=null){space(c,5);c.addView(text((t.reminded?"已提醒 ":"提醒 ")+t.reminder.replace('T',' '),11,ACCENT));}
-        c.setOnClickListener(v->{AlertDialog editor=editTask(t,null);if(owner!=null)keepParent(editor,owner,refresh);});
+        SwipeTaskView swipe=new SwipeTaskView(this,!t.done,()->changeDone(t,true,refresh));LinearLayout.LayoutParams spacing=new LinearLayout.LayoutParams(-1,-2);spacing.bottomMargin=dp(12);parent.addView(swipe,spacing);
+        LinearLayout card=column();card.setPadding(dp(15),dp(12),dp(15),dp(12));card.setBackground(background(appearance.surface,18));swipe.addView(card,new FrameLayout.LayoutParams(-1,-2));LinearLayout line=row();
+        CheckBox done=new CheckBox(this);done.setChecked(t.done);done.setContentDescription(t.done?"恢复任务："+t.title:"完成任务："+t.title);done.setOnClickListener(v->changeDone(t,done.isChecked(),refresh));line.addView(done,new LinearLayout.LayoutParams(dp(42),dp(44)));
+        TextView name=title(t.title,16);name.setMaxLines(2);name.setEllipsize(android.text.TextUtils.TruncateAt.END);if(t.done){name.setTextColor(MUTED);name.setPaintFlags(name.getPaintFlags()|android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);}weighted(line,name);card.addView(line);
+        Course course=state.course(t.courseId);LinearLayout meta=row();TextView tag=chip(course==null?"个人任务":course.name,course==null?MUTED:COLORS[course.color]);tag.setMaxLines(1);tag.setEllipsize(android.text.TextUtils.TruncateAt.END);meta.addView(tag,new LinearLayout.LayoutParams(0,-2,1));spaceHorizontal(meta,8);boolean late=!t.done && t.deadline().isBefore(LocalDateTime.now());meta.addView(text(t.done?"已完成":relativeDeadline(t,LocalDateTime.now()),12,late?appearance.danger:MUTED));card.addView(meta);space(card,7);card.addView(text(t.date+(t.time==null?" · 当日结束":" · "+t.time)+" 截止",12,MUTED));
+        if(!t.notes.isEmpty()){space(card,7);TextView notes=text(t.notes,12,MUTED);notes.setMaxLines(2);notes.setEllipsize(android.text.TextUtils.TruncateAt.END);card.addView(notes);}
+        card.setContentDescription("任务："+t.title);card.setOnClickListener(v->taskDetail(t.id,owner==null?null:t.courseId));card.setOnLongClickListener(v->{taskActions(t.id,refresh);return true;});
     }
+    void taskActions(String id,Runnable refresh){Task t=state.task(id);if(t==null)return;String[] items={"编辑任务","修改截止时间",t.done?"恢复为未完成":"标记完成","删除任务"};bottom(new AlertDialog.Builder(this).setTitle(t.title).setItems(items,(d,w)->{Task current=state.task(id);if(current==null)return;if(w==0 || w==1){AlertDialog parent=detailDialog;AlertDialog editor=w==0?editTask(current,null):editDeadline(current);if(parent!=null && parent.isShowing())keepParent(editor,parent,refresh==null?()->taskDetail(id,null):refresh);}else if(w==2)changeDone(current,!current.done,refresh);else confirm("删除这条任务？","删除后无法撤销。",()->{if(commit(s->s.tasks.removeIf(x->x.id.equals(id)))){if(refresh!=null)refresh.run();if(detailDialog!=null)detailDialog.dismiss();}});}).setNegativeButton("取消",null).create());}
+    AlertDialog editDeadline(Task task){
+        String[] value={task.date,task.time};LinearLayout f=form();f.addView(title(task.title,19));label(f,"截止日期");Button date=button(value[0],()->{}),time=button(value[1]==null?"添加具体时间":value[1],()->{});f.addView(date);
+        Runnable update=()->{date.setText(value[0]);time.setText(value[1]==null?"添加具体时间":value[1]);};date.setOnClickListener(v->pickDate(LocalDate.parse(value[0]),d->{value[0]=d.toString();update.run();}));LinearLayout quick=row();String[] labels={"今天","明天","一周后"};int[] days={0,1,7};for(int i=0;i<days.length;i++){final int offset=days[i];weighted(quick,button(labels[i],()->{value[0]=LocalDate.now().plusDays(offset).toString();update.run();}));}f.addView(quick);label(f,"时间选填");time.setOnClickListener(v->pickTime(value[1]==null?LocalTime.of(23,59):LocalTime.parse(value[1]),t->{value[1]=t.toString();update.run();}));f.addView(time);f.addView(button("清除时间",()->{value[1]=null;update.run();}));space(f,12);f.addView(text("相对提醒随截止时间调整；自定义提醒保持原时间。需要更改提醒时，请进入编辑任务。",13,MUTED));
+        final AlertDialog[] dialog={null};dialog[0]=formDialog("修改截止时间",f,()->{Task current=state.task(task.id);if(current==null){dialog[0].dismiss();return;}String reminder=current.reminderMinutes<0?current.reminder:relativeReminder(value[0],value[1],current.reminderMinutes).withSecond(0).withNano(0).toString();boolean reminded=Objects.equals(reminder,current.reminder) && current.reminded;if(reminder!=null && !reminded && LocalDateTime.parse(reminder).isBefore(LocalDateTime.now())){toast("提醒时间已过去，请进入编辑任务调整提醒");return;}if(commit(s->{Task found=s.task(task.id);if(found!=null){found.date=value[0];found.time=value[1];found.reminder=reminder;found.reminded=reminded;}}))dialog[0].dismiss();});dialog[0].show();return dialog[0];
+    }
+    void taskDetail(String id,String parentCourse){Task t=state.task(id);if(t==null)return;LinearLayout content=form();Course course=state.course(t.courseId);content.addView(chip(course==null?"个人任务":course.name,course==null?MUTED:COLORS[course.color]));space(content,14);content.addView(title(t.date+(t.time==null?" · 当日结束":"  "+t.time),21));content.addView(text(t.done?"已完成":relativeDeadline(t,LocalDateTime.now()),13,!t.done && t.deadline().isBefore(LocalDateTime.now())?appearance.danger:MUTED));
+        if(t.reminder!=null){space(content,12);content.addView(text((t.reminded?"已提醒 · ":"提醒 · ")+t.reminder.replace('T',' '),13,MUTED));}space(content,20);content.addView(title("补充说明",15));space(content,8);TextView notes=text(t.notes.isEmpty()?"暂无补充说明":t.notes,15,INK);notes.setTextIsSelectable(true);content.addView(notes);
+        ScrollView scroll=new ScrollView(this);scroll.addView(content);AlertDialog d=new AlertDialog.Builder(this).setView(scroll).setPositiveButton("编辑任务",null).setNeutralButton("更多",null).setNegativeButton(parentCourse==null?"关闭":"返回课程",(x,w)->{if(parentCourse!=null)courseDetail(parentCourse);}).create();d.setCustomTitle(sheetHeading(d,t.title,null));if(parentCourse!=null)d.setOnCancelListener(x->courseDetail(parentCourse));showDetail(d);d.getButton(-1).setOnClickListener(v->keepParent(editTask(state.task(id),null),d,()->{if(state.task(id)==null)d.dismiss();else taskDetail(id,parentCourse);}));d.getButton(-3).setOnClickListener(v->taskActions(id,()->{if(state.task(id)!=null)taskDetail(id,parentCourse);}));
+    }
+    View sheetHeading(AlertDialog dialog,String value,Integer color){SheetHeading head=new SheetHeading(this);head.setActions(()->dialog.getWindow().setLayout(-1,(int)(getResources().getDisplayMetrics().heightPixels*.94f)),dialog::cancel);head.setPadding(dp(20),dp(10),dp(20),dp(8));View handle=new View(this);handle.setBackground(background(appearance.line,3));LinearLayout.LayoutParams grab=new LinearLayout.LayoutParams(dp(38),dp(4));grab.gravity=Gravity.CENTER;grab.bottomMargin=dp(16);head.addView(handle,grab);TextView title=title(value,24);title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);if(color!=null)title.setTextColor(COLORS[color]);head.addView(title);head.setContentDescription("详情面板拖动区域：点击或上滑展开，下滑关闭");return head;}
     void courseDetail(String id){
         Course c=state.course(id);if(c==null)return;
-        LinearLayout content=column();content.setPadding(dp(8),dp(8),dp(8),0);content.addView(text(c.location+(c.teacher.isEmpty()?"":" · "+c.teacher),14,MUTED));
-        for(Meeting m:c.meetings)content.addView(text(meetingLabel(m),12,MUTED));space(content,12);
+        LinearLayout content=column();content.setPadding(dp(18),dp(8),dp(18),0);LinearLayout info=row();if(!c.location.isEmpty()){TextView place=chip("地点 · "+c.location,COLORS[c.color]);place.setMaxLines(2);weighted(info,place);}if(!c.teacher.isEmpty()){spaceHorizontal(info,8);TextView teacher=chip("教师 · "+c.teacher,MUTED);teacher.setMaxLines(2);weighted(info,teacher);}content.addView(info);space(content,14);
+        for(Meeting m:c.meetings){LinearLayout time=column();time.setPadding(dp(12),dp(10),dp(12),dp(10));time.setBackground(background(appearance.soft,12));time.addView(title(DAYS[m.day-1]+" · 第 "+m.first+"–"+m.last+" 节",14));time.addView(text(state.slots.get(m.first-1).start+"–"+state.slots.get(m.last-1).end,12,MUTED));TextView weeks=text("第 "+compactWeeks(m.weeks)+" 周  ▾",12,ACCENT);weeks.setMaxLines(1);weeks.setEllipsize(android.text.TextUtils.TruncateAt.END);weeks.setMinHeight(dp(32));weeks.setOnClickListener(v->{boolean expand=weeks.getMaxLines()==1;weeks.setMaxLines(expand?Integer.MAX_VALUE:1);weeks.setText(getString(R.string.course_weeks,expand?joinWeeks(m.weeks):compactWeeks(m.weeks),expand?"▴":"▾"));});time.addView(weeks);LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(8);content.addView(time,p);}space(content,10);
         ScrollView scroll=new ScrollView(this);scroll.addView(content);
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(c.name).setView(scroll).setPositiveButton("添加任务",null).setNeutralButton("编辑课程",null).setNegativeButton("关闭",null).create();
-        content.addView(title("所有未完成任务",17));space(content,10);LinearLayout tasks=column();content.addView(tasks);refreshCourseTasks(tasks,c.id,false,dialog);
+        dialog.setCustomTitle(sheetHeading(dialog,c.name,c.color));LinearLayout tasks=column();content.addView(tasks);refreshCourseTasks(tasks,c.id,false,dialog);
         Button completed=button("查看已完成记录",()->completedForCourse(c.id));content.addView(completed);showDetail(dialog);
         Runnable refresh=()->{if(state.course(c.id)==null)dialog.dismiss();else courseDetail(c.id);};
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v->keepParent(editTask(null,c.id),dialog,refresh));
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(v->keepParent(editCourse(state.course(c.id)),dialog,refresh));
     }
     void completedForCourse(String id){LinearLayout l=column();l.setPadding(dp(16),dp(8),dp(16),0);ScrollView scroll=new ScrollView(this);scroll.addView(l);AlertDialog d=new AlertDialog.Builder(this).setTitle("已完成记录").setView(scroll).setPositiveButton("关闭",null).setNeutralButton("返回课程",(x,w)->courseDetail(id)).create();refreshCourseTasks(l,id,true,d);showDetail(d);}
-    void showDetail(AlertDialog dialog){if(detailDialog!=null)detailDialog.dismiss();detailDialog=dialog;dialog.setOnDismissListener(d->{if(detailDialog==dialog)detailDialog=null;});bottom(dialog);Window window=dialog.getWindow();if(window!=null)window.setLayout(-1,(int)(getResources().getDisplayMetrics().heightPixels*.82f));}
+    void showDetail(AlertDialog dialog){if(undoPopup!=null){undoPopup.dismiss();undoPopup=null;}if(detailDialog!=null)detailDialog.dismiss();detailDialog=dialog;dialog.setOnDismissListener(d->{if(detailDialog==dialog){detailDialog=null;if(undoPopup!=null){undoPopup.dismiss();undoPopup=null;}}});bottom(dialog);Window window=dialog.getWindow();if(window!=null)window.setLayout(-1,(int)(getResources().getDisplayMetrics().heightPixels*.82f));}
     void keepParent(AlertDialog editor,Dialog parent,Runnable refresh){State before=state;editor.setOnDismissListener(d->{if(editorDialog==editor)editorDialog=null;if(!isFinishing() && !isDestroyed() && parent.isShowing() && state!=before && refresh!=null)refresh.run();});}
-    void refreshCourseTasks(LinearLayout list,String id,boolean completed,AlertDialog owner){list.removeAllViews();List<Task> tasks=state.sortedTasks(id,completed);if(tasks.isEmpty())list.addView(text(completed?"暂无已完成记录":"这门课暂时没有未完成任务",14,MUTED));for(Task t:tasks)taskCard(list,t,owner,()->refreshCourseTasks(list,id,completed,owner));}
+    void refreshCourseTasks(LinearLayout list,String id,boolean completed,AlertDialog owner){list.removeAllViews();List<Task> tasks=state.sortedTasks(id,completed);if(!completed){list.addView(title("待完成任务 · "+tasks.size(),17));space(list,10);}if(tasks.isEmpty())list.addView(text(completed?"暂无已完成记录":"这门课暂时没有未完成任务",14,MUTED));for(Task t:tasks)taskCard(list,t,owner,()->refreshCourseTasks(list,id,completed,owner));}
     String meetingLabel(Meeting m){return DAYS[m.day-1]+" · 第 "+m.first+"–"+m.last+" 节 · 周次 "+joinWeeks(m.weeks);}
+    String compactWeeks(Set<Integer> weeks){StringBuilder result=new StringBuilder();int first=-1,last=-1;for(int week:weeks){if(first<0){first=last=week;}else if(week==last+1)last=week;else{if(result.length()>0)result.append("、");result.append(first);if(last!=first)result.append("–").append(last);first=last=week;}}if(first>0){if(result.length()>0)result.append("、");result.append(first);if(last!=first)result.append("–").append(last);}return result.toString();}
     String joinWeeks(Set<Integer> weeks){StringBuilder b=new StringBuilder();for(int w:weeks){if(b.length()>0)b.append('、');b.append(w);}return b.toString();}
     LinearLayout form(){LinearLayout f=column();f.setPadding(dp(20),dp(4),dp(20),dp(20));return f;}
     EditText field(LinearLayout f,String label,String value,int lines){label(f,label);EditText e=new EditText(this);e.setText(value);e.setTextSize(15);e.setSingleLine(lines==1);if(lines>1){e.setMinLines(lines);e.setGravity(Gravity.TOP);}f.addView(e,new LinearLayout.LayoutParams(-1,-2));return e;}
-    AlertDialog formDialog(String title,LinearLayout form,Runnable save){ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);scroll.addView(form);AlertDialog previous=editorDialog;AlertDialog d=new AlertDialog.Builder(this).setTitle(title).setView(scroll).setPositiveButton("保存",null).setNegativeButton("取消",null).create();d.setOnShowListener(x->{editorDialog=d;d.getWindow().setLayout(-1,-1);d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);d.getButton(-1).setOnClickListener(v->save.run());});d.setOnDismissListener(x->{if(editorDialog==d)editorDialog=previous!=null && previous.isShowing()?previous:null;});return d;}
+    AlertDialog formDialog(String title,LinearLayout form,Runnable save){ScrollView scroll=new ScrollView(this);scroll.setFillViewport(false);scroll.addView(form);AlertDialog previous=editorDialog;AlertDialog d=new AlertDialog.Builder(this).setTitle(title).setView(scroll).setPositiveButton("保存",null).setNegativeButton("取消",null).create();d.setOnShowListener(x->{editorDialog=d;d.getWindow().setLayout(-1,-1);d.getWindow().setBackgroundDrawable(background(appearance.surface,0));d.getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);d.getButton(-1).setOnClickListener(v->save.run());});d.setOnDismissListener(x->{if(editorDialog==d)editorDialog=previous!=null && previous.isShowing()?previous:null;});return d;}
     void pickDate(LocalDate initial,Consumer<LocalDate> result){new DatePickerDialog(this,(v,y,m,d)->result.accept(LocalDate.of(y,m+1,d)),initial.getYear(),initial.getMonthValue()-1,initial.getDayOfMonth()).show();}
     void pickTime(LocalTime initial,Consumer<LocalTime> result){new TimePickerDialog(this,(v,h,m)->result.accept(LocalTime.of(h,m)),initial.getHour(),initial.getMinute(),true).show();}
     void pickDateTime(LocalDateTime initial,Consumer<LocalDateTime> result){pickDate(initial.toLocalDate(),d->pickTime(initial.toLocalTime(),t->result.accept(d.atTime(t))));}
@@ -276,7 +338,7 @@ public class MainActivity extends Activity {
         Course draft=new Course();draft.color=state.courses.size()%6;
         if(original!=null){draft.id=original.id;draft.name=original.name;draft.location=original.location;draft.teacher=original.teacher;draft.color=original.color;for(Meeting m:original.meetings){Meeting n=new Meeting();n.day=m.day;n.first=m.first;n.last=m.last;n.weeks.addAll(m.weeks);draft.meetings.add(n);}}
         boolean existing=state.course(draft.id)!=null;LinearLayout f=form();EditText name=field(f,"课程名称 *",draft.name,1),location=field(f,"上课地点",draft.location,1),teacher=field(f,"教师（可选）",draft.teacher,1);
-        label(f,"课程颜色");Spinner color=new Spinner(this);color.setAdapter(new ArrayAdapter<>(this,android.R.layout.simple_spinner_dropdown_item,new String[]{"鸢尾紫","薄荷绿","杏子橙","蔷薇粉","晴空蓝","燕麦棕"}));color.setSelection(draft.color);f.addView(color);
+        label(f,"课程颜色");Spinner color=new Spinner(this);color.setAdapter(courseColorAdapter());color.setSelection(draft.color);f.addView(color);
         label(f,"上课时段 *（可添加多个）");LinearLayout list=column();f.addView(list);refreshMeetings(list,draft);
         f.addView(button("＋ 添加上课时段",()->meetingEditor(draft.meetings.isEmpty()?null:draft.meetings.get(draft.meetings.size()-1),m->{draft.meetings.add(m);refreshMeetings(list,draft);})));
         final AlertDialog[] dialog={null};dialog[0]=formDialog(existing?"编辑课程":"添加课程",f,()->{
@@ -313,9 +375,10 @@ public class MainActivity extends Activity {
         reminders.addView(button("安排一分钟后测试提醒",()->{Task test=new Task();test.title="一分钟提醒测试";test.date=LocalDate.now().plusDays(1).toString();test.reminder=LocalDateTime.now().plusMinutes(1).withNano(0).toString();test.notes="由提醒测试创建，可测试后删除。";if(commit(s->s.tasks.add(test))){ensureNotifications();toast("已添加测试任务，提醒时间："+test.reminder.replace('T',' '));}}));
         reminders.addView(text(Reminders.diagnostics(this),12,MUTED));
         reminders.addView(text("所有学期的提醒都会安排。重启或重新打开后，会补发过去 24 小时内未送达的提醒。系统强制停止应用后，需要重新打开。",12,MUTED));
+        LinearLayout visuals=card(body);visuals.addView(title("外观与背景",18));space(visuals,6);visuals.addView(text("清爽校园 · "+(appearance.dark?"深色":"浅色")+"外观",13,MUTED));visuals.addView(button("背景、卡片与深浅色",this::appearanceEditor));
         LinearLayout preferences=card(body);preferences.addView(title("课表与任务偏好",18));preferences.addView(button("课表显示内容",this::displayOptions));preferences.addView(button("管理任务模板",this::templateManager));
         LinearLayout backup=card(body);backup.addView(title("备份与恢复",18));space(backup,8);backup.addView(text("备份包含全部学期、课程和任务，兼容恢复旧版备份。文件为明文 JSON，请保存在你信任的位置。",13,MUTED));backup.addView(button("导出全部学期备份",()->exportPicker()));backup.addView(button("从备份恢复",()->restorePicker()));
-        hint(body,"Schedule++  0.3.1","安卓原生 · 数据保存在本机\n教务导入将在后续版本考虑。\n参考：拾光课程表（Apache-2.0）；详见项目开源说明。");
+        hint(body,"Schedule++  0.4.0","安卓原生 · 数据保存在本机\n教务导入将在后续版本考虑。\n参考：拾光课程表（Apache-2.0）；详见项目开源说明。");
         body.addView(button("开源说明与许可证",()->{
             try {
                 StringBuilder notices=new StringBuilder();
@@ -358,6 +421,7 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){
         super.onActivityResult(request,result,data);if(result!=RESULT_OK || data==null || data.getData()==null)return;Uri uri=data.getData();
         try{
+            if(request==92){try(InputStream in=getContentResolver().openInputStream(uri)){if(in==null)throw new IOException("无法读取图片");cropPhoto(Appearance.readPhoto(in));}return;}
             if(request==90){try(OutputStream out=getContentResolver().openOutputStream(uri,"wt")){if(out==null)throw new IOException("无法写入该位置");out.write(Store.encode(state).getBytes(StandardCharsets.UTF_8));}toast("备份已导出");}
             if(request==91){final State imported;try(InputStream in=getContentResolver().openInputStream(uri)){if(in==null)throw new IOException("无法读取文件");imported=Store.decode(Store.read(in));}
                 int courseCount=0;for(Semester term:imported.allSemesters())courseCount+=term.courses.size();
